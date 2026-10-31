@@ -1,3 +1,120 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>จัดคู่ตีแบต</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f6f2;--surface:#fff;--ink:#16221b;--muted:#5d6b62;--line:#d9e1d9;--court:#1f6f50;--court-line:#e9f3ec;--accent:#e6b800;--accent-ink:#2a2200;--danger:#b3261e;
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1712;--surface:#18221b;--ink:#e8f0ea;--muted:#9fb0a4;--line:#2a392f;--court:#237a58;--court-line:#d7eadf;--accent:#f0c419;--accent-ink:#2a2200;--danger:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1712;--surface:#18221b;--ink:#e8f0ea;--muted:#9fb0a4;--line:#2a392f;--court:#237a58;--court-line:#d7eadf;--accent:#f0c419;--accent-ink:#2a2200;--danger:#ff8a80;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Prompt",system-ui,sans-serif;line-height:1.5}
+main{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.6rem;margin:0 0 4px;font-weight:600}
+h2{font-size:1.05rem;margin:0 0 10px;font-weight:600}
+.sub{color:var(--muted);margin:0 0 20px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:820px){.grid{grid-template-columns:320px 1fr;align-items:start}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+input[type=text],input[type=search],input[type=number],select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+input[type=text],input[type=search]{flex:1;min-width:0}
+input[type=number]{width:76px}
+select.lv{padding:4px 6px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600;font-size:1.05rem;padding:12px 20px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.players{list-style:none;margin:12px 0 0;padding:0;max-height:440px;overflow-y:auto}
+.players li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.players li.rest .nm{color:var(--muted)}
+.nm{flex:1 1 90px;min-width:0;overflow-wrap:anywhere}
+.cnt{color:var(--muted);font-size:.85rem;white-space:nowrap}
+.x{padding:2px 8px;color:var(--danger);border-color:transparent;background:transparent}
+.clock{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-top:12px;font-variant-numeric:tabular-nums}
+.courts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));margin-top:6px}
+.court{background:var(--court);border-radius:10px;padding:12px;color:#fff}
+.court h3{margin:0 0 8px;font-size:.95rem;font-weight:500}
+.court button{margin-top:10px;width:100%}
+.court select{width:100%;margin-top:6px}
+.court.idle{background:transparent;border:2px dashed var(--line);color:var(--muted)}
+.half{display:grid;grid-template-columns:1fr 1fr;border:2px solid var(--court-line);border-radius:4px;position:relative;min-height:96px}
+.half::after{content:"";position:absolute;left:50%;top:-6px;bottom:-6px;border-left:3px dashed var(--court-line)}
+.team{padding:10px;display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:center;font-weight:500}
+.team small{opacity:.8;font-weight:400}
+.nxt{margin-top:18px;border:1px solid var(--line);border-radius:10px;padding:12px}
+.nx{margin:10px 0;line-height:1.8}
+.warn{color:var(--danger);font-size:.9rem}
+.waiting{margin-top:14px}
+.chip{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 12px;margin:3px 4px 3px 0;font-size:.9rem}
+dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:min(420px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.empty{color:var(--muted);padding:24px 8px;text-align:center}
+.msg{color:var(--danger);margin-top:8px;min-height:1.2em}
+.muted{color:var(--muted);font-size:.85rem}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+</style>
+</head>
+<body>
+<main>
+  <h1>จัดคู่ตีแบต</h1>
+  <p class="sub">ใส่ชื่อพร้อมระดับ 1-5 กด “เริ่ม” แล้วกด “จบเกม” ที่คอร์ทที่เล่นเสร็จ ระบบจะบอกว่าคู่ต่อไปใครเจอใคร</p>
+  <div class="grid">
+    <section class="panel" aria-label="ผู้เล่น">
+      <h2>ผู้เล่น (<span id="count"></span>)</h2>
+      <label for="names" class="muted">ชื่อ (ใส่หลายชื่อได้ คั่นด้วยจุลภาค) และระดับฝีมือ</label>
+      <div class="row" style="margin-top:4px">
+        <input type="text" id="names" placeholder="เช่น ต้น" autocomplete="off">
+        <select id="lvl" aria-label="ระดับฝีมือ"><option value="1">1 เริ่มต้น</option><option value="2">2</option><option value="3" selected>3 กลาง</option><option value="4">4</option><option value="5">5 เก่งมาก</option></select>
+        <select id="who" aria-label="ประเภทผู้เล่น"><option value="cu" selected>ลูกค้า</option><option value="gk">คน GK</option></select>
+        <button id="add">เพิ่ม</button>
+      </div>
+      <label class="muted" style="display:block;margin-top:6px"><input type="checkbox" id="addnow"> ติ๊กว่ามาตีวันนี้ทันที</label>
+      <div class="row" style="margin-top:10px"><input type="search" id="qp" placeholder="ค้นหาชื่อ" aria-label="ค้นหาชื่อผู้เล่น"><select id="qf" aria-label="แสดงรายชื่อ"><option value="all">ทั้งหมด</option><option value="today">เฉพาะที่มาวันนี้</option></select></div>
+      <ul class="players" id="plist" style="margin-top:8px"></ul>
+      <p class="muted">ติ๊กช่องหน้าชื่อ = มาตีวันนี้ ถ้ายังไม่ติ๊ก ชื่อจะถูกเก็บในฐานข้อมูลไว้เฉย ๆ และไม่เข้าระบบจัดคู่</p>
+      <div class="row"><button id="b2all">ทุกคนลง 2 เกมติดได้</button><button id="b2none">ไม่มีใครลงติด</button></div>
+      <p class="muted">“ติด2เกม” = คนนี้ลงเกมต่อเนื่องได้ ถ้าไม่ติ๊ก ระบบจะให้พักอย่างน้อยหนึ่งเกมก่อน ถ้าคนไม่พอจะสุ่มคนที่เพิ่งเล่นมาเติมให้เอง</p>
+      <h2 style="margin-top:20px">เงื่อนไขพิเศษ</h2>
+      <div class="row"><select id="ra" aria-label="คนที่ 1" style="flex:1;min-width:0"></select><span class="muted">กับ</span><select id="rb" aria-label="คนที่ 2" style="flex:1;min-width:0"></select></div>
+      <div class="row" style="margin-top:6px"><select id="rk" aria-label="เงื่อนไข" style="flex:1;min-width:0"><option value="wp">อยากให้เป็นคู่กัน</option><option value="wo">อยากให้เป็นคู่ต่อสู้กัน</option><option value="bp">ไม่ให้เป็นคู่กัน</option><option value="bo">ไม่ให้เป็นคู่ต่อสู้กัน</option><option value="bs">ไม่ให้อยู่คอร์ทเดียวกันเลย</option></select><label class="muted"><input type="checkbox" id="ron" checked> ใช้ทันที</label><button id="radd">เพิ่ม</button></div>
+      <ul class="players" id="rlist"></ul>
+      <p class="muted">กลุ่ม “อยาก” จะทำให้ได้เมื่อสองคนนี้ว่างพร้อมกัน กลุ่ม “ไม่ให้” ระบบจะเลี่ยงเต็มที่ และแจ้งเตือนถ้าเลี่ยงไม่ได้</p>
+    </section>
+    <section class="panel" aria-label="คอร์ท">
+      <div class="row">
+        <label for="courts">คอร์ท</label><input type="number" id="courts" min="1" max="12">
+        <label for="hours">ชั่วโมง</label><input type="number" id="hours" min="0.5" max="12" step="0.5">
+        <select id="mode" aria-label="รูปแบบการจัด"><option value="auto">สลับอัตโนมัติ</option><option value="near">ระดับติดกันทั้งหมด</option><option value="mix">ตีคุมทั้งหมด</option></select>
+      </div>
+      <div class="row" style="margin-top:12px"><button class="primary" id="gen">เริ่ม</button></div>
+      <div class="msg" id="msg" role="status"></div>
+      <div class="clock" id="clock" hidden></div>
+      <div id="out"></div>
+      <h2 style="margin-top:22px">สรุปรายบุคคล</h2>
+      <input type="search" id="qs" placeholder="ค้นหาชื่อเพื่อดูยอดเงิน" aria-label="ค้นหาชื่อในตารางสรุป" style="width:100%;margin-bottom:8px">
+      <div class="scroll" id="sum"></div>
+      <div class="row" style="margin-top:10px"><button id="savepdf">ส่งออกสรุปเป็น PDF</button><button id="saveimg">บันทึกสรุปเป็นรูป</button></div>
+      <p class="muted">เกมติดกัน = ทั้ง 4 คนระดับห่างกันไม่เกิน 1 ตีคุม = ระดับห่างกันอย่างน้อย 2 แต่ผลรวมระดับของสองทีมเท่ากัน</p>
+      <p class="muted">ค่าใช้จ่าย = ค่าสนาม + ค่าลูก x จำนวนเกม (คิดค่าสนามเมื่อเล่นอย่างน้อย 1 เกม) คน GK 85 + 23 ต่อเกม สูงสุด 200 บาท ลูกค้า 95 + 25 ต่อเกม สูงสุด 220 บาท เครื่องหมาย * คือถึงเพดานแล้ว</p>
+      <div class="row" style="margin-top:12px"><button id="newday">เริ่มวันใหม่ (เก็บข้อมูลวันนี้)</button><button id="reset">ล้างโดยไม่บันทึก</button></div>
+      <h2 style="margin-top:22px">ประวัติย้อนหลัง</h2>
+      <div id="hist"></div>
+      <h2 style="margin-top:22px">สำรองและย้ายข้อมูล</h2>
+      <p class="muted">ข้อมูลทั้งหมด (รายชื่อ เงื่อนไข เกมวันนี้ ประวัติ) เก็บอยู่ในเบราว์เซอร์เครื่องนี้ กด “สำรองข้อมูล” เพื่อเก็บเป็นไฟล์ แล้วนำไปกด “นำเข้าข้อมูล” บนเครื่องอื่นได้</p>
+      <div class="row"><button class="primary" id="bkexp">สำรองข้อมูล (ดาวน์โหลดไฟล์)</button><button id="bkimp">นำเข้าข้อมูลจากไฟล์</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
+      <p class="muted" id="bkinfo" role="status"></p>
+    </section>
+  </div>
+</main>
+<dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
+<script>
 (function(){
 var KEY="badminton-pairing-v3";
 var S={players:[],rules:[],history:[],slots:[],next:null,gcount:0,partner:{},opp:{},courts:2,nid:1,mode:"auto",hours:3,startedAt:null};
@@ -472,3 +589,7 @@ try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().
 setInterval(tick,1000);
 render();
 })();
+
+</script>
+</body>
+</html>
