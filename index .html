@@ -59,12 +59,18 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
+.sync{margin:-14px 0 16px}
+.sync.ok{color:var(--court)}
+.sync.bad{color:var(--danger)}
+.viewonly button:not(#savepdf):not(#saveimg):not(.hpdf),.viewonly select:not(#qf),.viewonly input:not([type=search]),.viewonly .players li{pointer-events:none;opacity:.55}
+.viewonly .viewhide{display:none}
 </style>
 </head>
 <body>
 <main>
   <h1>จัดคู่ตีแบต</h1>
   <p class="sub">ใส่ชื่อพร้อมระดับ 1-5 กด “เริ่ม” แล้วกด “จบเกม” ที่คอร์ทที่เล่นเสร็จ ระบบจะบอกว่าคู่ต่อไปใครเจอใคร</p>
+  <p class="muted sync" id="sync" role="status"></p>
   <div class="grid">
     <section class="panel" aria-label="ผู้เล่น">
       <h2>ผู้เล่น (<span id="count"></span>)</h2>
@@ -109,11 +115,17 @@ th:first-child,td:first-child{text-align:left}
       <h2 style="margin-top:22px">สำรองและย้ายข้อมูล</h2>
       <p class="muted">ข้อมูลทั้งหมด (รายชื่อ เงื่อนไข เกมวันนี้ ประวัติ) เก็บอยู่ในเบราว์เซอร์เครื่องนี้ กด “สำรองข้อมูล” เพื่อเก็บเป็นไฟล์ แล้วนำไปกด “นำเข้าข้อมูล” บนเครื่องอื่นได้</p>
       <div class="row"><button class="primary" id="bkexp">สำรองข้อมูล (ดาวน์โหลดไฟล์)</button><button id="bkimp">นำเข้าข้อมูลจากไฟล์</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
+      <div class="row viewhide" style="margin-top:8px"><button id="vlink">คัดลอกลิงก์ดูอย่างเดียว (ส่งให้คนอื่น)</button></div>
       <p class="muted" id="bkinfo" role="status"></p>
     </section>
   </div>
 </main>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
+<script>
+/* ตั้งค่าซิงค์สด: ใส่ที่อยู่ Firebase Realtime Database ระหว่างเครื่องหมายคำพูด (ดูวิธีตั้งค่าในคู่มือ)
+   room = ชื่อห้อง ควรตั้งเป็นข้อความยาวๆ เดายาก เพราะใครรู้ชื่อห้องก็เปิดดูและแก้ได้ */
+window.KDP_CONFIG={fbUrl:"https://kdp-badminton-default-rtdb.asia-southeast1.firebasedatabase.app",room:"kdp-54b43131e288"};
+</script>
 <script>
 (function(){
 var KEY="badminton-pairing-v3";
@@ -129,7 +141,10 @@ try{
 }catch(e){}
 if(!Array.isArray(S.slots))S.slots=[];
 S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+var CFG=window.KDP_CONFIG||{},FB=String(CFG.fbUrl||"").replace(/\/+$/,""),ROOM=CFG.room||"kdp",SYNC=!!FB;
+var VIEW=/[?&]view=1/.test(location.search),CID=Math.random().toString(36).slice(2);
+function lsSave(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){S.upd=Date.now();S.by=CID;lsSave();push()}
 var $=function(id){return document.getElementById(id)};
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function AR(){return S.rules.filter(function(r){return r.on!==false})}
@@ -585,6 +600,69 @@ $("bkimp").onclick=function(){$("bkfile").click()};
 $("bkfile").onchange=function(){var f=this.files[0];if(f)bkImport(f);this.value=""};
 updBk();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){})}catch(e){}
+
+/* ---------- ซิงค์สด (Firebase Realtime Database ผ่าน REST + SSE) ---------- */
+function setSync(t,c){var e=$("sync");if(e){e.textContent=t;e.className="muted sync "+(c||"")}}
+function node(){return FB+"/rooms/"+encodeURIComponent(ROOM)+".json"}
+var pushT=null,busy=false,pullT=null;
+function push(){
+  if(!SYNC||VIEW)return;
+  clearTimeout(pushT);pushT=setTimeout(doPush,400);
+}
+function doPush(){
+  if(busy){pushT=setTimeout(doPush,400);return}
+  busy=true;pushT=null;
+  var body=JSON.stringify({upd:S.upd,by:CID,json:JSON.stringify(S)});
+  fetch(node(),{method:"PUT",headers:{"Content-Type":"application/json"},body:body}).then(function(r){
+    if(!r.ok)throw new Error(r.status);
+    setSync("ซิงค์สดอยู่ (ทุกเครื่องเห็นข้อมูลเดียวกัน)","ok");
+  }).catch(function(){
+    setSync("ส่งข้อมูลขึ้นเซิร์ฟเวอร์ไม่สำเร็จ (บันทึกในเครื่องแล้ว) กำลังลองใหม่","bad");
+    if(!pushT)pushT=setTimeout(doPush,5000);
+  }).then(function(){busy=false});
+}
+function applyRemote(d){
+  var n;try{n=JSON.parse(d.json)}catch(e){return}
+  var base={players:[],rules:[],history:[],slots:[],next:null,gcount:0,partner:{},opp:{},courts:2,nid:1,mode:"auto",hours:3,startedAt:null};
+  Object.keys(S).forEach(function(k){delete S[k]});
+  Object.assign(S,base,n);
+  if(!Array.isArray(S.slots))S.slots=[];
+  S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
+  S.upd=d.upd;S.by=d.by;
+  lsSave();fixSlots();render();
+  setSync(VIEW?"ดูอย่างเดียว (อัปเดตสด)":"ซิงค์สดอยู่ (ทุกเครื่องเห็นข้อมูลเดียวกัน)","ok");
+}
+function pull(){
+  if(!SYNC)return;
+  fetch(node(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){
+    var mine=S.upd||0;
+    if(!d||!d.json){if(!VIEW&&S.players.length)push();setSync(VIEW?"ดูอย่างเดียว (ยังไม่มีข้อมูลในห้องนี้)":"ซิงค์สดอยู่","ok");return}
+    if(d.by===CID||d.upd===mine){setSync(VIEW?"ดูอย่างเดียว (อัปเดตสด)":"ซิงค์สดอยู่ (ทุกเครื่องเห็นข้อมูลเดียวกัน)","ok");return}
+    if(d.upd<mine&&!VIEW){push();return}
+    if(d.upd>mine)applyRemote(d);
+  }).catch(function(){setSync("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ใช้ข้อมูลในเครื่องไปก่อน","bad")});
+}
+function soonPull(){clearTimeout(pullT);pullT=setTimeout(pull,150)}
+if(VIEW)document.body.classList.add("viewonly");
+if(!SYNC)setSync(VIEW?"ดูอย่างเดียว":"ใช้ข้อมูลเฉพาะเครื่องนี้ (ยังไม่ได้ตั้งค่าซิงค์สด)","");
+else{
+  setSync("กำลังเชื่อมต่อ...","");
+  pull();
+  try{
+    var es=new EventSource(node());
+    es.addEventListener("put",soonPull);es.addEventListener("patch",soonPull);
+    es.onerror=function(){setSync("ขาดการเชื่อมต่อ กำลังต่อใหม่...","bad")};
+  }catch(e){}
+  setInterval(pull,20000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)pull()});
+  window.addEventListener("online",pull);
+}
+$("vlink").onclick=function(){
+  var u=location.origin+location.pathname+"?view=1";
+  var ok=function(){say("คัดลอกลิงก์แล้ว: "+u)};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(u).then(ok,function(){say(u)});
+  else say(u);
+};
 
 setInterval(tick,1000);
 render();
