@@ -59,15 +59,23 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
+.sync{margin:-14px 0 16px}
+.sync.ok{color:var(--court)}
+.sync.bad{color:var(--danger)}
+.viewonly button:not(#savepdf):not(#saveimg):not(.hpdf),.viewonly select:not(#qf),.viewonly input:not([type=search]),.viewonly textarea,.viewonly .players li{pointer-events:none;opacity:.55}
+.viewonly .viewhide{display:none}
+textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
 </style>
 </head>
 <body>
 <main>
   <h1>จัดคู่ตีแบต</h1>
   <p class="sub">ใส่ชื่อพร้อมระดับ 1-5 กด “เริ่ม” แล้วกด “จบเกม” ที่คอร์ทที่เล่นเสร็จ ระบบจะบอกว่าคู่ต่อไปใครเจอใคร</p>
+  <p class="muted sync" id="sync" role="status"></p>
   <div class="grid">
     <section class="panel" aria-label="ผู้เล่น">
       <h2>ผู้เล่น (<span id="count"></span>)</h2>
+      <div class="row viewhide" style="margin:0 0 10px"><button id="pull">ดึงรายชื่อ/Join จาก Google Sheet</button></div>
       <label for="names" class="muted">ชื่อ (ใส่หลายชื่อได้ คั่นด้วยจุลภาค) และระดับฝีมือ</label>
       <div class="row" style="margin-top:4px">
         <input type="text" id="names" placeholder="เช่น ต้น" autocomplete="off">
@@ -110,10 +118,31 @@ th:first-child,td:first-child{text-align:left}
       <p class="muted">ข้อมูลทั้งหมด (รายชื่อ เงื่อนไข เกมวันนี้ ประวัติ) เก็บอยู่ในเบราว์เซอร์เครื่องนี้ กด “สำรองข้อมูล” เพื่อเก็บเป็นไฟล์ แล้วนำไปกด “นำเข้าข้อมูล” บนเครื่องอื่นได้</p>
       <div class="row"><button class="primary" id="bkexp">สำรองข้อมูล (ดาวน์โหลดไฟล์)</button><button id="bkimp">นำเข้าข้อมูลจากไฟล์</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
       <p class="muted" id="bkinfo" role="status"></p>
+      <div class="viewhide">
+      <h2 style="margin-top:22px">เชื่อมต่อ Google Sheet (ดึงรายชื่อและช่อง Join อัตโนมัติ)</h2>
+      <p class="muted">วางลิงก์ Web app ของ Apps Script และรหัสผ่านที่ตั้งไว้ในสคริปต์ แล้วกดบันทึก ค่านี้จะซิงก์ไปทุกเครื่องในห้องเดียวกัน แอพจะดึงรายชื่อให้เองตอนเปิดหน้า (ถ้ายังไม่กด “เริ่ม”) หรือกดดึงเองได้ทุกเมื่อ</p>
+      <input id="shurl" type="text" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;margin-bottom:6px" aria-label="ลิงก์ Web app">
+      <input id="shtok" type="password" placeholder="รหัสผ่านของสคริปต์" style="width:100%;margin-bottom:6px" aria-label="รหัสผ่านของสคริปต์">
+      <div class="row"><button id="shsave">บันทึกการเชื่อมต่อ</button><button class="primary" id="shpull">ดึงรายชื่อ/Join ตอนนี้</button></div>
+      <h2 style="margin-top:22px">นำเข้ารายชื่อจาก Google Sheet (วางข้อมูลเอง ใช้สำรอง)</h2>
+      <p class="muted">ใน Sheet เลือกตารางรวมแถวหัวตาราง (ต้องมีคอลัมน์ ชื่อ และ ระดับคะแนน หรือ ระดับมือ ส่วน ลูกค้า กับ Join ใส่หรือไม่ใส่ก็ได้) กด Ctrl+C แล้ววางในช่องนี้ ชื่อที่ซ้ำกับในแอพจะถูกอัปเดตระดับ ชื่อใหม่จะถูกเพิ่ม ไม่มีใครถูกลบ</p>
+      <textarea id="shin" rows="6" placeholder="วางข้อมูลที่คัดลอกจาก Google Sheet ที่นี่" aria-label="ข้อมูลจาก Google Sheet"></textarea>
+      <div class="row" style="margin-top:8px"><button class="primary" id="shgo">นำเข้ารายชื่อ</button><label class="muted"><input type="checkbox" id="shjoin" checked> ติ๊ก “มาตีวันนี้” ตามช่อง Join</label></div>
+      <p class="muted" id="shmsg" role="status"></p>
+      <h2 style="margin-top:22px">เชิญคนอื่นเข้ากลุ่ม</h2>
+      <p class="muted">ลิงก์มีรหัสห้องอยู่ท้ายลิงก์ ใครได้ลิงก์แบบแก้ไขได้ก็แก้ข้อมูลได้ ส่งเฉพาะคนที่ไว้ใจ ลิงก์ดูอย่างเดียวช่วยกันกดพลาด แต่ไม่ใช่ระบบล็อกจริง</p>
+      <div class="row"><button id="invedit">คัดลอกลิงก์ (แก้ไขได้)</button><button id="invview">คัดลอกลิงก์ (ดูอย่างเดียว)</button></div>
+      </div>
     </section>
   </div>
 </main>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ค่าเชื่อมต่อ Firebase (ไม่ใช่ความลับ) ห้ามใส่รหัสห้องตรงนี้ */
+window.FB_CONFIG={apiKey:"AIzaSyDrmY7owu3ieaPzL_MtP1EU8R19mY3GPbw",authDomain:"kdp-r-0.firebaseapp.com",projectId:"kdp-r-0",storageBucket:"kdp-r-0.firebasestorage.app",messagingSenderId:"620749262821",appId:"1:620749262821:web:9e0017952276a3405d690c"};
+</script>
 <script>
 (function(){
 var KEY="badminton-pairing-v3";
@@ -129,7 +158,7 @@ try{
 }catch(e){}
 if(!Array.isArray(S.slots))S.slots=[];
 S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushState()}
 var $=function(id){return document.getElementById(id)};
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function AR(){return S.rules.filter(function(r){return r.on!==false})}
@@ -297,7 +326,7 @@ function renderHistory(){
     var title=dt.toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"})+" เริ่ม "+pad(dt.getHours())+":"+pad(dt.getMinutes())+" น.";
     el.innerHTML='<summary style="cursor:pointer;padding:8px 0"><b>'+title+'</b> รวม '+d.total+' บาท</summary><div class="scroll"><table><thead><tr><th>ชื่อ</th><th>ประเภท</th><th>เกม</th><th>รอ (นาที)</th><th>บาท</th></tr></thead><tbody>'+d.rows.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td>'+(r.gk?"GK":"ลูกค้า")+'</td><td>'+r.games+'</td><td>'+r.wait+'</td><td>'+r.fee+(r.capped?'*':'')+'</td></tr>'}).join("")+'</tbody></table></div><div class="row" style="margin:8px 0 12px"><button class="hpdf">ส่งออก PDF</button><button class="del">ลบวันนี้ออกจากประวัติ</button></div>';
     el.querySelector(".hpdf").onclick=function(){exportPdf(rowsHist(d),d.at,d.games)};
-    el.querySelector(".del").onclick=function(){ask("ลบประวัติวันนี้?",function(){S.history.splice(i,1);save();render()})};
+    el.querySelector(".del").onclick=function(){ask("ลบประวัติวันนี้?",function(){S.history.splice(i,1);dayDel(d.at);save();render()})};
     box.appendChild(el);
   });
 }
@@ -412,7 +441,7 @@ $("newday").onclick=function(){
   if(!S.gcount){say("ยังไม่มีเกมในวันนี้ จึงไม่มีอะไรให้บันทึก");return}
   ask("บันทึกสรุปวันนี้ลงประวัติ แล้วเริ่มวันใหม่? (รายชื่อ ระดับ ประเภท และเงื่อนไขพิเศษยังอยู่ แต่การติ๊กมาตีวันนี้จะถูกล้างทั้งหมด)",function(){
   var rows=S.players.filter(function(p){return p.games>0}).sort(function(a,b){return b.games-a.games}).map(function(p){var b=bill(p);return{name:p.name,level:p.level,gk:p.gk,games:p.games,near:p.near,mix:p.mix,wait:Math.floor(total(p)/60000),fee:b.sum,capped:b.capped}});
-  S.history.unshift({at:S.startedAt||Date.now(),games:S.gcount,total:rows.reduce(function(s,r){return s+r.fee},0),rows:rows});
+  S.history.unshift({at:S.startedAt||Date.now(),games:S.gcount,total:rows.reduce(function(s,r){return s+r.fee},0),rows:rows});dayPut(S.history[0]);
   wipeDay();S.players.forEach(function(p){p.active=false});fixSlots();say("");save();render();
   });
 };
@@ -567,7 +596,7 @@ function bkApply(d){
   S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
   var mx=0;S.players.concat(S.rules).forEach(function(o){if(o.id>mx)mx=o.id});
   S.nid=Math.max(S.nid||1,mx+1);
-  PK=null;S.next=null;fixSlots();save();render();say("");updBk("นำเข้าข้อมูลเรียบร้อยแล้ว");
+  PK=null;S.next=null;fixSlots();save();pushAllDays();render();say("");updBk("นำเข้าข้อมูลเรียบร้อยแล้ว");
 }
 function bkImport(file){
   var rd=new FileReader();
@@ -586,6 +615,155 @@ $("bkfile").onchange=function(){var f=this.files[0];if(f)bkImport(f);this.value=
 updBk();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){})}catch(e){}
 
+
+/* ---------- ซิงก์ข้ามเครื่อง (Firebase Firestore) ---------- */
+var RK="kdp-room",VIEW=/[?&]view=1/.test(location.search),CID=Math.random().toString(36).slice(2);
+var DB=null,ROOMREF=null,ROOM="",ready=false,wTimer=null,wBusy=false,wDirty=false,rTimer=null,seededDays=false;
+var BASE0={players:[],rules:[],history:[],slots:[],next:null,gcount:0,partner:{},opp:{},courts:2,nid:1,mode:"auto",hours:3,startedAt:null};
+function setSync(t,c){var e=$("sync");if(e){e.textContent=t;e.className="muted sync "+(c||"")}}
+function lsSave(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function normS(){
+  if(!Array.isArray(S.slots))S.slots=[];
+  S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
+  var mx=0;S.players.concat(S.rules).forEach(function(o){if(o.id>mx)mx=o.id});S.nid=Math.max(S.nid||1,mx+1);
+}
+function errTxt(e){return e&&e.code==="permission-denied"?"ไม่มีสิทธิ์ (ตรวจกฎ Firestore และรหัสห้อง)":(e&&(e.code||e.message))||"error"}
+function pushState(){if(!DB||VIEW||!ready)return;wDirty=true;clearTimeout(wTimer);wTimer=setTimeout(flush,600)}
+function flush(){
+  if(!DB||VIEW||!ready||wBusy||!wDirty)return;
+  wBusy=true;wDirty=false;
+  var c={};Object.keys(S).forEach(function(k){if(k!=="history"&&k!=="lastBackup")c[k]=S[k]});
+  ROOMREF.set({json:JSON.stringify(c),by:CID,t:Date.now()}).then(function(){
+    setSync("ซิงก์สดอยู่ (ล่าสุด "+new Date().toLocaleTimeString("th-TH")+")","ok");
+  }).catch(function(e){
+    setSync("ส่งข้อมูลไม่สำเร็จ: "+errTxt(e)+" (บันทึกในเครื่องแล้ว)","bad");
+    if(!e||e.code!=="permission-denied"){clearTimeout(rTimer);rTimer=setTimeout(function(){wDirty=true;flush()},5000)}
+  }).then(function(){wBusy=false;if(wDirty)flush()});
+}
+function adoptRemote(d){
+  if(!d||d.by===CID)return;
+  var n;try{n=JSON.parse(d.json)}catch(e){return}
+  var hist=S.history,lb=S.lastBackup;
+  Object.keys(S).forEach(function(k){delete S[k]});
+  Object.assign(S,BASE0,n);
+  S.history=hist||[];if(lb)S.lastBackup=lb;
+  normS();lsSave();fixSlots();render();
+}
+function dayPut(d){if(!DB||VIEW||!d)return;ROOMREF.collection("days").doc("d"+d.at).set({at:d.at,json:JSON.stringify(d)}).catch(function(e){setSync("บันทึกประวัติรายวันไม่สำเร็จ: "+errTxt(e),"bad")})}
+function dayDel(at){if(!DB||VIEW)return;ROOMREF.collection("days").doc("d"+at).delete().catch(function(){})}
+function pushAllDays(){if(!DB||VIEW)return;S.history.forEach(dayPut)}
+function connect(){
+  var cfg=window.FB_CONFIG;
+  if(!window.firebase||!cfg){setSync("ใช้ข้อมูลเฉพาะเครื่องนี้ (โหลดระบบซิงก์ไม่ได้ ตรวจอินเทอร์เน็ต)","bad");return}
+  if(!ROOM){roomBox();return}
+  try{if(!firebase.apps.length)firebase.initializeApp(cfg);DB=firebase.firestore()}catch(e){setSync("เชื่อม Firebase ไม่ได้: "+e.message,"bad");return}
+  ROOMREF=DB.collection("rooms").doc(ROOM);
+  setSync("กำลังเชื่อมต่อ...","");
+  ROOMREF.onSnapshot(function(sn){
+    if(sn.metadata.fromCache&&!sn.exists)return;
+    if(sn.exists){adoptRemote(sn.data());ready=true;setSync(VIEW?"ดูอย่างเดียว (อัปเดตสด)":"ซิงก์สดอยู่ ทุกเครื่องเห็นข้อมูลเดียวกัน","ok")}
+    else{ready=true;if(!VIEW&&S.players.length){wDirty=true;flush();setSync("ส่งข้อมูลในเครื่องนี้ขึ้นห้องใหม่แล้ว","ok")}else setSync(VIEW?"ดูอย่างเดียว (ห้องนี้ยังไม่มีข้อมูล)":"เชื่อมต่อแล้ว ห้องนี้ยังว่าง","ok")}
+    fillSheetCfg();maybeAutoPull();
+  },function(e){setSync("อ่านข้อมูลไม่ได้: "+errTxt(e),"bad")});
+  ROOMREF.collection("days").orderBy("at","desc").limit(200).onSnapshot(function(q){
+    if(q.metadata.fromCache&&q.empty)return;
+    if(q.empty){if(!seededDays&&!VIEW&&S.history.length){seededDays=true;pushAllDays()}return}
+    var h=[];q.docs.forEach(function(x){try{h.push(JSON.parse(x.data().json))}catch(e){}});
+    S.history=h;lsSave();renderHistory();
+  },function(){});
+}
+function roomBox(){
+  var el=$("sync");el.className="muted sync";
+  el.innerHTML='ใส่รหัสห้องเพื่อซิงก์ข้ามเครื่อง: <input id="roomin" type="text" autocomplete="off" style="width:min(260px,60vw)"> <button id="roomgo">เชื่อมต่อ</button>';
+  $("roomgo").onclick=function(){
+    var v=$("roomin").value.trim();
+    if(v.length<8){say("รหัสห้องสั้นเกินไป (อย่างน้อย 8 ตัวอักษร)");return}
+    try{localStorage.setItem(RK,v)}catch(e){}
+    ROOM=v;say("");connect();
+  };
+}
+function copyLink(view){
+  if(!ROOM){say("ยังไม่ได้ตั้งรหัสห้อง");return}
+  var u=location.origin+location.pathname+(view?"?view=1":"")+"#"+encodeURIComponent(ROOM);
+  var ok=function(){say("คัดลอกลิงก์แล้ว วางส่งใน LINE ได้เลย")};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(u).then(ok,function(){say(u)});else say(u);
+}
+$("invedit").onclick=function(){copyLink(false)};
+$("invview").onclick=function(){copyLink(true)};
+/* ---------- นำเข้าจาก Google Sheet (คัดลอก-วาง) ---------- */
+function shImport(){
+  var msg=$("shmsg"),txt=$("shin").value.replace(/\r/g,"");
+  var lines=txt.split("\n").filter(function(l){return l.trim()});
+  if(lines.length<2){msg.textContent="วางข้อมูลพร้อมแถวหัวตารางก่อน";return}
+  var dl0=lines[0].indexOf("\t")>=0?"\t":",";
+  var h=lines[0].split(dl0).map(function(x){return x.trim()});
+  var c={no:h.indexOf("คนที่"),name:h.indexOf("ชื่อ"),cu:h.indexOf("ลูกค้า"),join:h.indexOf("Join"),sc:h.indexOf("ระดับคะแนน"),lv:h.indexOf("ระดับมือ")};
+  if(c.name<0||(c.sc<0&&c.lv<0)){msg.textContent="ไม่พบหัวคอลัมน์ “ชื่อ” และ “ระดับคะแนน” (หรือ “ระดับมือ”) ตรวจว่าคัดลอกแถวหัวตารางมาด้วย";return}
+  var LVM={NB:1,BG:2,N:3,S:4,P:5},seen={},list=[],bad=[];
+  for(var i=1;i<lines.length;i++){
+    var t=lines[i].split(dl0),raw=String(t[c.name]||"").trim();
+    if(!raw)continue;
+    var cu=(c.cu>=0&&String(t[c.cu]||"").trim()!=="")||/^C\s/i.test(raw);
+    var name=raw.replace(/^(GK|C)\s+/i,"").trim()||raw;
+    if(seen[name])name+=" ("+(c.no>=0?String(t[c.no]||"").trim():i)+")";
+    seen[name]=1;
+    var sc=c.sc>=0?Number(String(t[c.sc]||"").trim()):NaN,code=c.lv>=0?String(t[c.lv]||"").trim().toUpperCase():"";
+    var lv=(sc>=1&&sc<=5)?Math.round(sc):LVM[code];
+    if(!lv){bad.push(name);lv=3}
+    list.push({name:name,level:lv,gk:!cu,join:c.join>=0&&/^true$/i.test(String(t[c.join]||"").trim())});
+  }
+  if(!list.length){msg.textContent="ไม่พบรายชื่อ";return}
+  applyList(list,bad,$("shjoin").checked);
+}
+function applyList(list,bad,useJoin){
+  var msg=$("shmsg"),now=Date.now(),add=0,upd=0,pl=playingIds();
+  list.forEach(function(x){
+    var p=S.players.filter(function(q){return q.name===x.name})[0];
+    if(!p){p={id:S.nid++,name:x.name,level:x.level,gk:x.gk,active:false,games:0,near:0,mix:0,waitMs:0,waitSince:null};S.players.push(p);add++}
+    else{p.level=x.level;p.gk=x.gk;upd++}
+    if(useJoin&&p.active!==x.join){
+      p.active=x.join;
+      if(S.startedAt){if(x.join){if(pl.indexOf(p.id)<0)p.waitSince=now}else if(p.waitSince){p.waitMs+=now-p.waitSince;p.waitSince=null}}
+    }
+  });
+  S.next=null;save();render();
+  var t="ดึงรายชื่อแล้ว: เพิ่มใหม่ "+add+" คน อัปเดต "+upd+" คน"+(useJoin?" มาตีวันนี้ "+list.filter(function(x){return x.join}).length+" คน":"")+(bad.length?" | อ่านระดับไม่ได้ (ใช้ 3 แทน): "+bad.join(", "):"");
+  msg.textContent=t;say(t);
+}
+$("shgo").onclick=shImport;
+/* ---------- ดึงจาก Google Sheet ตรงๆ (Apps Script) ---------- */
+function fillSheetCfg(){var c=S.sheet||{};if($("shurl"))$("shurl").value=c.url||"";if($("shtok"))$("shtok").value=c.token||""}
+$("shsave").onclick=function(){
+  var u=$("shurl").value.trim(),t=$("shtok").value.trim();
+  if(!/^https:\/\/script\.google\.com\//.test(u)||!t){$("shmsg").textContent="ลิงก์ต้องขึ้นต้นด้วย https://script.google.com/ และต้องใส่รหัสผ่าน";return}
+  S.sheet={url:u,token:t};save();$("shmsg").textContent="บันทึกการเชื่อมต่อแล้ว กด “ดึงรายชื่อ/Join ตอนนี้” เพื่อทดสอบ";
+};
+function pullSheet(auto){
+  var c=S.sheet||{};
+  if(VIEW)return;
+  if(!c.url||!c.token){if(!auto)say("ยังไม่ได้ตั้งค่า Google Sheet (ดูหัวข้อ “เชื่อมต่อ Google Sheet” ท้ายหน้า)");return}
+  $("shmsg").textContent="กำลังดึงรายชื่อจาก Google Sheet...";
+  fetch(c.url+(c.url.indexOf("?")>=0?"&":"?")+"t="+encodeURIComponent(c.token)+"&_="+Date.now(),{cache:"no-store"})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(!d||!d.ok)throw new Error((d&&d.error)||"ตอบกลับไม่ถูกต้อง");
+      applyList(d.list||[],d.bad||[],true);
+    })
+    .catch(function(e){var t="ดึงจาก Google Sheet ไม่สำเร็จ: "+(e&&e.message||e)+" (ตรวจว่า Deploy เป็น Web app แบบ Anyone และรหัสผ่านถูกต้อง)";$("shmsg").textContent=t;if(!auto)say(t)});
+}
+$("shpull").onclick=function(){pullSheet(false)};
+$("pull").onclick=function(){pullSheet(false)};
+var autoDone=false;
+function maybeAutoPull(){if(autoDone)return;autoDone=true;if(!S.startedAt&&S.sheet&&S.sheet.url&&!VIEW)pullSheet(true)}
+/* ---------- เริ่มระบบซิงก์ ---------- */
+(function(){
+  var hv=decodeURIComponent((location.hash||"").replace(/^#/,"")).trim();
+  if(hv.length>=8){try{localStorage.setItem(RK,hv)}catch(e){}try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}}
+  try{ROOM=localStorage.getItem(RK)||""}catch(e){ROOM=""}
+  if(VIEW)document.body.classList.add("viewonly");
+  connect();
+  if(!DB)setTimeout(function(){fillSheetCfg();maybeAutoPull()},800);
+})();
 setInterval(tick,1000);
 render();
 })();
