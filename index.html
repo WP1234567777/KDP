@@ -62,7 +62,7 @@ th:first-child,td:first-child{text-align:left}
 .sync{margin:-14px 0 16px}
 .sync.ok{color:var(--court)}
 .sync.bad{color:var(--danger)}
-.viewonly button:not(#savepdf):not(#saveimg):not(.hpdf),.viewonly select:not(#qf),.viewonly input:not([type=search]),.viewonly textarea,.viewonly .players li{pointer-events:none;opacity:.55}
+.viewonly button:not(.keep),.viewonly select:not(#qf),.viewonly input:not([type=search]),.viewonly textarea,.viewonly .players li{pointer-events:none;opacity:.55}
 .viewonly .viewhide{display:none}
 textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
 </style>
@@ -100,13 +100,16 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       <h2 style="margin-top:22px">สรุปรายบุคคล</h2>
       <input type="search" id="qs" placeholder="ค้นหาชื่อเพื่อดูยอดเงิน" aria-label="ค้นหาชื่อในตารางสรุป" style="width:100%;margin-bottom:8px">
       <div class="scroll" id="sum"></div>
-      <div class="row" style="margin-top:10px"><button id="savepdf">ส่งออกสรุปเป็น PDF</button><button id="saveimg">บันทึกสรุปเป็นรูป</button></div>
+      <div class="row" style="margin-top:10px"><button id="saveimg" class="keep">บันทึกสรุปเป็นรูป</button></div>
       <p class="muted" id="expmsg" role="status"></p>
       <p class="muted">เกมติดกัน = ทั้ง 4 คนระดับห่างกันไม่เกิน 1 ตีคุม = ระดับห่างกันอย่างน้อย 2 แต่ผลรวมระดับของสองทีมเท่ากัน</p>
       <p class="muted">ค่าใช้จ่าย = ค่าสนาม + ค่าลูก x จำนวนเกม (คิดค่าสนามเมื่อเล่นอย่างน้อย 1 เกม) คน GK 85 + 23 ต่อเกม สูงสุด 200 บาท ลูกค้า 95 + 25 ต่อเกม สูงสุด 220 บาท เครื่องหมาย * คือถึงเพดานแล้ว</p>
       <div class="row" style="margin-top:12px"><button id="newday">เริ่มวันใหม่ (เก็บข้อมูลวันนี้)</button><button id="reset">ล้างโดยไม่บันทึก</button></div>
       <h2 style="margin-top:22px">ประวัติย้อนหลัง</h2>
+      <div class="row viewhide" style="margin-bottom:8px"><select id="oldsel"><option value="30">เก่ากว่า 30 วัน</option><option value="60">เก่ากว่า 60 วัน</option><option value="90">เก่ากว่า 90 วัน</option><option value="0">ทั้งหมด</option></select><button id="olddel">ลบประวัติเก่า</button></div>
+      <p class="muted" id="oldmsg" role="status"></p>
       <div id="hist"></div>
+      <dialog id="imgdlg" style="max-width:96vw;border:1px solid #ccc;border-radius:12px;padding:12px"><p class="muted" style="margin:0 0 8px">บนมือถือ/iPad: กดค้างที่รูปแล้วเลือก “บันทึกรูปภาพ” หรือกดปุ่มด้านล่าง</p><div style="max-height:62vh;overflow:auto"><img id="imgprev" alt="สรุป" style="max-width:100%;display:block"></div><div class="row" style="margin-top:10px"><a id="imgdl" class="keep" style="padding:9px 14px;border:1px solid #888;border-radius:8px;text-decoration:none;color:inherit">ดาวน์โหลด</a><button id="imgshare" class="keep" style="display:none">แชร์ (LINE ฯลฯ)</button><button class="keep" onclick="document.getElementById('imgdlg').close()">ปิด</button></div></dialog>
       <details class="viewhide" id="walkin" style="margin-top:22px">
         <summary style="cursor:pointer;font-weight:600">เพิ่มผู้เล่นหน้างาน (ลูกค้าที่มาใหม่)</summary>
         <p class="muted">พิมพ์ชื่อ เลือกระดับและประเภท แล้วกดเพิ่ม ใส่หลายชื่อได้โดยคั่นด้วยจุลภาค (ทุกชื่อจะได้ระดับและประเภทเดียวกัน) ถ้าชื่อมีอยู่ในรายชื่อแล้ว ระบบจะติ๊ก “มาตีวันนี้” ให้โดยไม่เปลี่ยนระดับเดิม</p>
@@ -141,7 +144,7 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       </div>
     </section>
   </div>
-<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v6 · 1 พ.ย. 2569 · แก้ปุ่มรูป/PDF + เพิ่มชื่อหน้างาน</p>
+<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v7 · 1 พ.ย. 2569 · ตัด PDF, ดูรูปก่อนบันทึก, ลบประวัติเก่า</p>
 </main>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -331,8 +334,8 @@ function renderHistory(){
   S.history.forEach(function(d,i){
     var dt=new Date(d.at),el=document.createElement("details");
     var title=dt.toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"})+" เริ่ม "+pad(dt.getHours())+":"+pad(dt.getMinutes())+" น.";
-    el.innerHTML='<summary style="cursor:pointer;padding:8px 0"><b>'+title+'</b> รวม '+d.total+' บาท</summary><div class="scroll"><table><thead><tr><th>ชื่อ</th><th>ประเภท</th><th>เกม</th><th>รอ (นาที)</th><th>บาท</th></tr></thead><tbody>'+d.rows.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td>'+(r.gk?"GK":"ลูกค้า")+'</td><td>'+r.games+'</td><td>'+r.wait+'</td><td>'+r.fee+(r.capped?'*':'')+'</td></tr>'}).join("")+'</tbody></table></div><div class="row" style="margin:8px 0 12px"><button class="hpdf">ส่งออก PDF</button><button class="del">ลบวันนี้ออกจากประวัติ</button></div>';
-    el.querySelector(".hpdf").onclick=function(){exportPdf(rowsHist(d),d.at,d.games)};
+    el.innerHTML='<summary style="cursor:pointer;padding:8px 0"><b>'+title+'</b> รวม '+d.total+' บาท</summary><div class="scroll"><table><thead><tr><th>ชื่อ</th><th>ประเภท</th><th>เกม</th><th>รอ (นาที)</th><th>บาท</th></tr></thead><tbody>'+d.rows.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td>'+(r.gk?"GK":"ลูกค้า")+'</td><td>'+r.games+'</td><td>'+r.wait+'</td><td>'+r.fee+(r.capped?'*':'')+'</td></tr>'}).join("")+'</tbody></table></div><div class="row" style="margin:8px 0 12px"><button class="himg keep">บันทึกเป็นรูป</button><button class="del">ลบวันนี้ออกจากประวัติ</button></div>';
+    el.querySelector(".himg").onclick=function(){exportImg(rowsHist(d),d.at,d.games)};
     el.querySelector(".del").onclick=function(){ask("ลบประวัติวันนี้?",function(){S.history.splice(i,1);dayDel(d.at);save();render()})};
     box.appendChild(el);
   });
@@ -508,7 +511,6 @@ function expSay(t){var e=$("expmsg");if(e)e.textContent=t||""}
 function dl(blob,name){
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
   document.body.appendChild(a);a.click();a.remove();
-  if(/\.(png|pdf)$/.test(name))expSay("สร้างไฟล์แล้ว: "+name+" (ดูที่แถบดาวน์โหลดของเบราว์เซอร์ ถ้าไม่เห็น ให้อนุญาตการดาวน์โหลดของเว็บนี้)");
   setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
 }
 function drawTable(rows,H,sub,pg,grand){
@@ -561,50 +563,39 @@ function exportImg(rows,t,games){
     }catch(e){expSay("สร้างรูปไม่สำเร็จ: "+(e&&e.message||e))}
   }).catch(function(e){expSay("สร้างรูปไม่สำเร็จ: "+(e&&e.message||e))});
 }
-/* สร้างไฟล์ PDF เอง (หน้าละ 1 รูป JPEG) ไม่ใช้ไลบรารี และแสดงภาษาไทยได้ครบ */
-function makePdf(imgs){
-  var parts=[],off=0,xr=[],n=imgs.length;
-  function add(v){
-    if(typeof v==="string"){var b=new Uint8Array(v.length);for(var i=0;i<v.length;i++)b[i]=v.charCodeAt(i)&255;v=b}
-    parts.push(v);off+=v.length;
-  }
-  function obj(id,s){xr[id]=off;add(id+" 0 obj\n"+s+"\nendobj\n")}
-  add("%PDF-1.4\n");
-  obj(1,"<</Type/Catalog/Pages 2 0 R>>");
-  var kids=[];for(var i=0;i<n;i++)kids.push((3+3*i)+" 0 R");
-  obj(2,"<</Type/Pages/Kids["+kids.join(" ")+"]/Count "+n+">>");
-  imgs.forEach(function(im,i){
-    var pg=3+3*i,ct=4+3*i,ig=5+3*i,cs="q 595.28 0 0 841.89 0 0 cm /Im0 Do Q";
-    obj(pg,"<</Type/Page/Parent 2 0 R/MediaBox[0 0 595.28 841.89]/Resources<</XObject<</Im0 "+ig+" 0 R>>>>/Contents "+ct+" 0 R>>");
-    obj(ct,"<</Length "+cs.length+">>\nstream\n"+cs+"\nendstream");
-    xr[ig]=off;
-    add(ig+" 0 obj\n<</Type/XObject/Subtype/Image/Width "+im.w+"/Height "+im.h+"/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length "+im.data.length+">>\nstream\n");
-    add(im.data);add("\nendstream\nendobj\n");
-  });
-  var size=3+3*n,start=off,xt="xref\n0 "+size+"\n0000000000 65535 f \n";
-  for(var k=1;k<size;k++)xt+=("0000000000"+xr[k]).slice(-10)+" 00000 n \n";
-  add(xt+"trailer\n<</Size "+size+"/Root 1 0 R>>\nstartxref\n"+start+"\n%%EOF");
-  return new Blob(parts,{type:"application/pdf"});
+function showImg(c,name){
+  var url=c.toDataURL("image/png"),d=$("imgdlg");
+  $("imgprev").src=url;
+  $("imgdl").href=url;$("imgdl").download=name;
+  $("imgshare").style.display=(navigator.share&&navigator.canShare)?"":"none";
+  $("imgshare").onclick=function(){
+    c.toBlob(function(b){var f=new File([b],name,{type:"image/png"});
+      if(navigator.canShare({files:[f]}))navigator.share({files:[f],title:"สรุปการตีแบต"}).catch(function(){});
+      else expSay("เครื่องนี้แชร์ไฟล์ตรงไม่ได้ ให้กดค้างที่รูปแล้วเลือกบันทึก");});
+  };
+  if(d.showModal)d.showModal();else d.setAttribute("open","");
+  expSay("สร้างรูปแล้ว");
 }
-function exportPdf(rows,t,games){
-  if(!rows.length){expSay("ยังไม่มีข้อมูลให้ส่งออก");return}
-  say("");expSay("กำลังสร้าง PDF...");
+function exportImg(rows,t,games){
+  if(!rows.length){expSay("ยังไม่มีข้อมูลให้บันทึก");return}
+  say("");expSay("กำลังสร้างรูป...");
   ready().then(function(){
-    try{
-    var pages=Math.ceil(rows.length/PER),grand=grandOf(rows),imgs=[];
-    for(var i=0;i<pages;i++){
-      var c=drawTable(rows.slice(i*PER,(i+1)*PER),PH,subOf(t,games),pages>1?"หน้า "+(i+1)+"/"+pages:"",i===pages-1?grand:null);
-      var bin=atob(c.toDataURL("image/jpeg",0.92).split(",")[1]),u=new Uint8Array(bin.length);
-      for(var j=0;j<bin.length;j++)u[j]=bin.charCodeAt(j);
-      imgs.push({data:u,w:c.width,h:c.height});
-    }
-    dl(makePdf(imgs),fname("badminton","pdf",t));
-    }catch(e){expSay("สร้าง PDF ไม่สำเร็จ: "+(e&&e.message||e))}
-  }).catch(function(e){expSay("สร้าง PDF ไม่สำเร็จ: "+(e&&e.message||e))});
+    try{showImg(drawTable(rows,HEAD+RH*(rows.length+2)+40,subOf(t,games),"",grandOf(rows)),fname("badminton","png",t))}
+    catch(e){expSay("สร้างรูปไม่สำเร็จ: "+(e&&e.message||e))}
+  }).catch(function(e){expSay("สร้างรูปไม่สำเร็จ: "+(e&&e.message||e))});
 }
 $("saveimg").onclick=function(){exportImg(rowsToday(),S.startedAt||Date.now(),S.gcount)};
-$("savepdf").onclick=function(){exportPdf(rowsToday(),S.startedAt||Date.now(),S.gcount)};
 
+$("olddel").onclick=function(){
+  var n=parseInt($("oldsel").value,10),cut=Date.now()-n*864e5;
+  var gone=S.history.filter(function(d){return n===0||d.at<cut});
+  if(!gone.length){$("oldmsg").textContent="ไม่มีประวัติที่เข้าเงื่อนไข";return}
+  ask("ลบประวัติ "+gone.length+" วัน"+(n?" (เก่ากว่า "+n+" วัน)":" (ทั้งหมด)")+" ? ลบแล้วกู้คืนไม่ได้ ควรกด “สำรองข้อมูล” ก่อน",function(){
+    gone.forEach(function(d){dayDel(d.at)});
+    S.history=S.history.filter(function(d){return gone.indexOf(d)<0});
+    $("oldmsg").textContent="ลบแล้ว "+gone.length+" วัน";save();render();
+  });
+};
 /* ---------- สำรอง / นำเข้าข้อมูล ---------- */
 function updBk(m){
   $("bkinfo").textContent=m||(S.lastBackup?"สำรองล่าสุด "+new Date(S.lastBackup).toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"ยังไม่เคยสำรองข้อมูลบนเครื่องนี้ แนะนำให้สำรองหลังจบวันทุกครั้ง");
