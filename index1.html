@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>จัดคู่ตีแบต</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f6f2;--surface:#fff;--ink:#16221b;--muted:#5d6b62;--line:#d9e1d9;--court:#1f6f50;--court-line:#e9f3ec;--accent:#e6b800;--accent-ink:#2a2200;--danger:#b3261e;
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1712;--surface:#18221b;--ink:#e8f0ea;--muted:#9fb0a4;--line:#2a392f;--court:#237a58;--court-line:#d7eadf;--accent:#f0c419;--accent-ink:#2a2200;--danger:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1712;--surface:#18221b;--ink:#e8f0ea;--muted:#9fb0a4;--line:#2a392f;--court:#237a58;--court-line:#d7eadf;--accent:#f0c419;--accent-ink:#2a2200;--danger:#ff8a80;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Prompt",system-ui,sans-serif;line-height:1.5}
+main{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.6rem;margin:0 0 4px;font-weight:600}
+h2{font-size:1.05rem;margin:0 0 10px;font-weight:600}
+.sub{color:var(--muted);margin:0 0 20px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:820px){.grid{grid-template-columns:320px 1fr;align-items:start}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+input[type=text],input[type=search],input[type=number],select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+input[type=text],input[type=search]{flex:1;min-width:0}
+input[type=number]{width:76px}
+select.lv{padding:4px 6px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600;font-size:1.05rem;padding:12px 20px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.players{list-style:none;margin:12px 0 0;padding:0;max-height:440px;overflow-y:auto}
+.players li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.players li.rest .nm{color:var(--muted)}
+.nm{flex:1 1 90px;min-width:0;overflow-wrap:anywhere}
+.cnt{color:var(--muted);font-size:.85rem;white-space:nowrap}
+.x{padding:2px 8px;color:var(--danger);border-color:transparent;background:transparent}
+.clock{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-top:12px;font-variant-numeric:tabular-nums}
+.courts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));margin-top:6px}
+.court{background:var(--court);border-radius:10px;padding:12px;color:#fff}
+.court h3{margin:0 0 8px;font-size:.95rem;font-weight:500}
+.court button{margin-top:10px;width:100%}
+.court select{width:100%;margin-top:6px}
+.court.idle{background:transparent;border:2px dashed var(--line);color:var(--muted)}
+.half{display:grid;grid-template-columns:1fr 1fr;border:2px solid var(--court-line);border-radius:4px;position:relative;min-height:96px}
+.half::after{content:"";position:absolute;left:50%;top:-6px;bottom:-6px;border-left:3px dashed var(--court-line)}
+.team{padding:10px;display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:center;font-weight:500}
+.team small{opacity:.8;font-weight:400}
+.nxt{margin-top:18px;border:1px solid var(--line);border-radius:10px;padding:12px}
+.nx{margin:10px 0;line-height:1.8}
+.warn{color:var(--danger);font-size:.9rem}
+.waiting{margin-top:14px}
+.chip{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 12px;margin:3px 4px 3px 0;font-size:.9rem}
+dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:min(420px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.empty{color:var(--muted);padding:24px 8px;text-align:center}
+.msg{color:var(--danger);margin-top:8px;min-height:1.2em}
+.muted{color:var(--muted);font-size:.85rem}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+.sync{margin:-14px 0 16px}
+.sync.ok{color:var(--court)}
+.sync.bad{color:var(--danger)}
+.viewonly button:not(#savepdf):not(#saveimg):not(.hpdf),.viewonly select:not(#qf),.viewonly input:not([type=search]),.viewonly textarea,.viewonly .players li{pointer-events:none;opacity:.55}
+.viewonly .viewhide{display:none}
+textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>จัดคู่ตีแบต</h1>
+  <p class="sub">ใส่ชื่อพร้อมระดับ 1-5 กด “เริ่ม” แล้วกด “จบเกม” ที่คอร์ทที่เล่นเสร็จ ระบบจะบอกว่าคู่ต่อไปใครเจอใคร</p>
+  <p class="muted sync" id="sync" role="status"></p>
+  <div class="grid">
+    <section class="panel" aria-label="ผู้เล่น">
+      <h2>ผู้เล่น (<span id="count"></span>)</h2>
+      <div class="row viewhide" style="margin:0 0 10px"><button id="pull">ดึงรายชื่อ/Join จาก Google Sheet</button></div>
+      <div class="row" style="margin-top:10px"><input type="search" id="qp" placeholder="ค้นหาชื่อ" aria-label="ค้นหาชื่อผู้เล่น"><select id="qf" aria-label="แสดงรายชื่อ"><option value="all">ทั้งหมด</option><option value="today">เฉพาะที่มาวันนี้</option></select></div>
+      <ul class="players" id="plist" style="margin-top:8px"></ul>
+      <p class="muted">ติ๊กช่องหน้าชื่อ = มาตีวันนี้ ถ้ายังไม่ติ๊ก ชื่อจะถูกเก็บในฐานข้อมูลไว้เฉย ๆ และไม่เข้าระบบจัดคู่</p>
+      <div class="row"><button id="b2all">ทุกคนลง 2 เกมติดได้</button><button id="b2none">ไม่มีใครลงติด</button></div>
+      <p class="muted">“ติด2เกม” = คนนี้ลงเกมต่อเนื่องได้ ถ้าไม่ติ๊ก ระบบจะให้พักอย่างน้อยหนึ่งเกมก่อน ถ้าคนไม่พอจะสุ่มคนที่เพิ่งเล่นมาเติมให้เอง</p>
+      <h2 style="margin-top:20px">เงื่อนไขพิเศษ</h2>
+      <div class="row"><select id="ra" aria-label="คนที่ 1" style="flex:1;min-width:0"></select><span class="muted">กับ</span><select id="rb" aria-label="คนที่ 2" style="flex:1;min-width:0"></select></div>
+      <div class="row" style="margin-top:6px"><select id="rk" aria-label="เงื่อนไข" style="flex:1;min-width:0"><option value="wp">อยากให้เป็นคู่กัน</option><option value="wo">อยากให้เป็นคู่ต่อสู้กัน</option><option value="bp">ไม่ให้เป็นคู่กัน</option><option value="bo">ไม่ให้เป็นคู่ต่อสู้กัน</option><option value="bs">ไม่ให้อยู่คอร์ทเดียวกันเลย</option></select><label class="muted"><input type="checkbox" id="ron" checked> ใช้ทันที</label><button id="radd">เพิ่ม</button></div>
+      <ul class="players" id="rlist"></ul>
+      <p class="muted">กลุ่ม “อยาก” จะทำให้ได้เมื่อสองคนนี้ว่างพร้อมกัน กลุ่ม “ไม่ให้” ระบบจะเลี่ยงเต็มที่ และแจ้งเตือนถ้าเลี่ยงไม่ได้</p>
+    </section>
+    <section class="panel" aria-label="คอร์ท">
+      <div class="row">
+        <label for="courts">คอร์ท</label><input type="number" id="courts" min="1" max="12">
+        <label for="hours">ชั่วโมง</label><input type="number" id="hours" min="0.5" max="12" step="0.5">
+        <select id="mode" aria-label="รูปแบบการจัด"><option value="auto">สลับอัตโนมัติ</option><option value="near">ระดับติดกันทั้งหมด</option><option value="mix">ตีคุมทั้งหมด</option></select>
+      </div>
+      <div class="row" style="margin-top:12px"><button class="primary" id="gen">เริ่ม</button></div>
+      <div class="msg" id="msg" role="status"></div>
+      <div class="clock" id="clock" hidden></div>
+      <div id="out"></div>
+      <h2 style="margin-top:22px">สรุปรายบุคคล</h2>
+      <input type="search" id="qs" placeholder="ค้นหาชื่อเพื่อดูยอดเงิน" aria-label="ค้นหาชื่อในตารางสรุป" style="width:100%;margin-bottom:8px">
+      <div class="scroll" id="sum"></div>
+      <div class="row" style="margin-top:10px"><button id="savepdf">ส่งออกสรุปเป็น PDF</button><button id="saveimg">บันทึกสรุปเป็นรูป</button></div>
+      <p class="muted">เกมติดกัน = ทั้ง 4 คนระดับห่างกันไม่เกิน 1 ตีคุม = ระดับห่างกันอย่างน้อย 2 แต่ผลรวมระดับของสองทีมเท่ากัน</p>
+      <p class="muted">ค่าใช้จ่าย = ค่าสนาม + ค่าลูก x จำนวนเกม (คิดค่าสนามเมื่อเล่นอย่างน้อย 1 เกม) คน GK 85 + 23 ต่อเกม สูงสุด 200 บาท ลูกค้า 95 + 25 ต่อเกม สูงสุด 220 บาท เครื่องหมาย * คือถึงเพดานแล้ว</p>
+      <div class="row" style="margin-top:12px"><button id="newday">เริ่มวันใหม่ (เก็บข้อมูลวันนี้)</button><button id="reset">ล้างโดยไม่บันทึก</button></div>
+      <h2 style="margin-top:22px">ประวัติย้อนหลัง</h2>
+      <div id="hist"></div>
+      <details class="viewhide" id="walkin" style="margin-top:22px">
+        <summary style="cursor:pointer;font-weight:600">เพิ่มผู้เล่นหน้างาน (ลูกค้าที่มาใหม่)</summary>
+        <p class="muted">พิมพ์ชื่อ เลือกระดับและประเภท แล้วกดเพิ่ม ใส่หลายชื่อได้โดยคั่นด้วยจุลภาค (ทุกชื่อจะได้ระดับและประเภทเดียวกัน) ถ้าชื่อมีอยู่ในรายชื่อแล้ว ระบบจะติ๊ก “มาตีวันนี้” ให้โดยไม่เปลี่ยนระดับเดิม</p>
+        <label for="names" class="muted">ชื่อ</label>
+        <div class="row" style="margin-top:4px">
+          <input type="text" id="names" placeholder="เช่น ต้น" autocomplete="off">
+          <select id="lvl" aria-label="ระดับฝีมือ"><option value="1">1 (NB)</option><option value="2">2 (BG)</option><option value="3" selected>3 (N)</option><option value="4">4 (S)</option><option value="5">5 (P)</option></select>
+          <select id="who" aria-label="ประเภทผู้เล่น"><option value="cu" selected>ลูกค้า</option><option value="gk">คน GK</option></select>
+          <button class="primary" id="add">เพิ่ม</button>
+        </div>
+        <label class="muted" style="display:block;margin-top:6px"><input type="checkbox" id="addnow" checked> ติ๊กว่ามาตีวันนี้ทันที (เข้าคิวรอเลย)</label>
+        <p class="muted" id="addmsg" role="status"></p>
+      </details>
+      <h2 style="margin-top:22px">สำรองและย้ายข้อมูล</h2>
+      <p class="muted">ข้อมูลทั้งหมด (รายชื่อ เงื่อนไข เกมวันนี้ ประวัติ) เก็บอยู่ในเบราว์เซอร์เครื่องนี้ กด “สำรองข้อมูล” เพื่อเก็บเป็นไฟล์ แล้วนำไปกด “นำเข้าข้อมูล” บนเครื่องอื่นได้</p>
+      <div class="row"><button class="primary" id="bkexp">สำรองข้อมูล (ดาวน์โหลดไฟล์)</button><button id="bkimp">นำเข้าข้อมูลจากไฟล์</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
+      <p class="muted" id="bkinfo" role="status"></p>
+      <div class="viewhide">
+      <h2 style="margin-top:22px">เชื่อมต่อ Google Sheet (ดึงรายชื่อและช่อง Join อัตโนมัติ)</h2>
+      <p class="muted">วางลิงก์ Web app ของ Apps Script และรหัสผ่านที่ตั้งไว้ในสคริปต์ แล้วกดบันทึก ค่านี้จะซิงก์ไปทุกเครื่องในห้องเดียวกัน แอพจะดึงรายชื่อให้เองตอนเปิดหน้า (ถ้ายังไม่กด “เริ่ม”) หรือกดดึงเองได้ทุกเมื่อ</p>
+      <input id="shurl" type="text" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;margin-bottom:6px" aria-label="ลิงก์ Web app">
+      <input id="shtok" type="password" placeholder="รหัสผ่านของสคริปต์" style="width:100%;margin-bottom:6px" aria-label="รหัสผ่านของสคริปต์">
+      <div class="row"><button id="shsave">บันทึกการเชื่อมต่อ</button><button class="primary" id="shpull">ดึงรายชื่อ/Join ตอนนี้</button></div>
+      <h2 style="margin-top:22px">นำเข้ารายชื่อจาก Google Sheet (วางข้อมูลเอง ใช้สำรอง)</h2>
+      <p class="muted">ใน Sheet เลือกตารางรวมแถวหัวตาราง (ต้องมีคอลัมน์ ชื่อ และ ระดับคะแนน หรือ ระดับมือ ส่วน ลูกค้า กับ Join ใส่หรือไม่ใส่ก็ได้) กด Ctrl+C แล้ววางในช่องนี้ ชื่อที่ซ้ำกับในแอพจะถูกอัปเดตระดับ ชื่อใหม่จะถูกเพิ่ม ไม่มีใครถูกลบ</p>
+      <textarea id="shin" rows="6" placeholder="วางข้อมูลที่คัดลอกจาก Google Sheet ที่นี่" aria-label="ข้อมูลจาก Google Sheet"></textarea>
+      <div class="row" style="margin-top:8px"><button class="primary" id="shgo">นำเข้ารายชื่อ</button><label class="muted"><input type="checkbox" id="shjoin" checked> ติ๊ก “มาตีวันนี้” ตามช่อง Join</label></div>
+      <p class="muted" id="shmsg" role="status"></p>
+      <h2 style="margin-top:22px">เชิญคนอื่นเข้ากลุ่ม</h2>
+      <p class="muted">ลิงก์มีรหัสห้องอยู่ท้ายลิงก์ ใครได้ลิงก์แบบแก้ไขได้ก็แก้ข้อมูลได้ ส่งเฉพาะคนที่ไว้ใจ ลิงก์ดูอย่างเดียวช่วยกันกดพลาด แต่ไม่ใช่ระบบล็อกจริง</p>
+      <div class="row"><button id="invedit">คัดลอกลิงก์ (แก้ไขได้)</button><button id="invview">คัดลอกลิงก์ (ดูอย่างเดียว)</button></div>
+      </div>
+    </section>
+  </div>
+</main>
+<dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ค่าเชื่อมต่อ Firebase (ไม่ใช่ความลับ) ห้ามใส่รหัสห้องตรงนี้ */
+window.FB_CONFIG={apiKey:"AIzaSyDrmY7owu3ieaPzL_MtP1EU8R19mY3GPbw",authDomain:"kdp-r-0.firebaseapp.com",projectId:"kdp-r-0",storageBucket:"kdp-r-0.firebasestorage.app",messagingSenderId:"620749262821",appId:"1:620749262821:web:9e0017952276a3405d690c"};
+</script>
+<script>
+(function(){
+var KEY="badminton-pairing-v3";
+var S={players:[],rules:[],history:[],slots:[],next:null,gcount:0,partner:{},opp:{},courts:2,nid:1,mode:"auto",hours:3,startedAt:null};
+try{
+  var raw=localStorage.getItem(KEY);
+  if(raw){Object.assign(S,JSON.parse(raw))}
+  else{var r2=localStorage.getItem("badminton-pairing-v2");
+    if(r2){var o=JSON.parse(r2);
+      ["players","rules","history","partner","opp","courts","nid","mode","hours","startedAt"].forEach(function(k){if(o[k]!==undefined)S[k]=o[k]});
+      S.gcount=o.round||0;
+      if(S.startedAt){var t0=Date.now();S.players.forEach(function(p){if(p.active&&p.waitSince==null)p.waitSince=t0})}}}
+}catch(e){}
+if(!Array.isArray(S.slots))S.slots=[];
+S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushState()}
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function AR(){return S.rules.filter(function(r){return r.on!==false})}
+function key(a,b){return a<b?a+"-"+b:b+"-"+a}
+function byId(id){return S.players.filter(function(p){return p.id===id})[0]}
+function L(id){var p=byId(id);return p?p.level:3}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function say(t){$("msg").textContent=t||""}
+function pad(n){return n<10?"0"+n:""+n}
+function ms(x){var s=Math.max(0,Math.floor(x/1000));return Math.floor(s/60)+":"+pad(s%60)}
+function hms(x){x=Math.max(0,Math.floor(x/1000));return Math.floor(x/3600)+":"+pad(Math.floor(x/60)%60)+":"+pad(x%60)}
+function total(p){return p.waitMs+(p.waitSince?Date.now()-p.waitSince:0)}
+function playingIds(){var r=[];S.slots.forEach(function(s){if(s)r=r.concat(s.m)});return r}
+function fixSlots(){while(S.slots.length<S.courts)S.slots.push(null);while(S.slots.length>S.courts&&S.slots[S.slots.length-1]===null)S.slots.pop()}
+var PR={gk:{court:85,ball:23,cap:200},cu:{court:95,ball:25,cap:220}};
+function bill(p){var r=p.gk?PR.gk:PR.cu;if(!p.games)return{court:0,ball:0,sum:0,capped:false};var raw=r.court+r.ball*p.games;return{court:r.court,ball:r.ball*p.games,sum:Math.min(raw,r.cap),capped:raw>r.cap}}
+var Q={p:"",s:"",f:"all"};
+function hit(p,q){return !q||p.name.toLowerCase().indexOf(q)>=0}
+function lvOpts(v){var h="";for(var i=1;i<=5;i++)h+='<option value="'+i+'"'+(i===v?" selected":"")+'>'+i+'</option>';return h}
+var KN={wp:"อยากให้เป็นคู่กัน",wo:"อยากให้เป็นคู่ต่อสู้กัน",bp:"ไม่ให้เป็นคู่กัน",bo:"ไม่ให้เป็นคู่ต่อสู้กัน",bs:"ไม่ให้อยู่คอร์ทเดียวกันเลย"};
+function MD(m){return m==="near"?"ระดับติดกัน":"ตีคุม"}
+
+/* ---------- การจัดคู่ ---------- */
+function relOf(g,a,b){var i=g.indexOf(a),j=g.indexOf(b);if(i<0||j<0)return null;if(Math.floor(i/4)!==Math.floor(j/4))return"diff";return Math.floor((i%4)/2)===Math.floor((j%4)/2)?"p":"o"}
+function rulePen(k,r){return k==="wp"?(r==="p"?0:60):k==="wo"?(r==="o"?0:60):k==="bp"?(r==="p"?200:0):k==="bo"?(r==="o"?200:0):(r==="diff"?0:200)}
+function mcost(g,md,pool,rank){
+  var pc=function(a,b){return Math.min(S.partner[key(a,b)]||0,10)},oc=function(a,b){return Math.min(S.opp[key(a,b)]||0,10)};
+  var a=g[0],b=g[1],x=g[2],y=g[3],l=g.map(L),sp=Math.max.apply(null,l)-Math.min.apply(null,l);
+  var c=3*(pc(a,b)+pc(x,y))+oc(a,x)+oc(a,y)+oc(b,x)+oc(b,y);
+  c+=6*Math.abs(l[0]+l[1]-l[2]-l[3]);
+  c+=md==="near"?6*Math.max(0,sp-1):6*Math.max(0,2-sp);
+  g.forEach(function(id){c+=3*rank[id]});
+  AR().forEach(function(r){
+    var rr=relOf(g,r.a,r.b);
+    if(rr)c+=rulePen(r.k,rr);
+    else if((r.k==="wp"||r.k==="wo")&&((g.indexOf(r.a)>=0&&pool.indexOf(r.b)>=0)||(g.indexOf(r.b)>=0&&pool.indexOf(r.a)>=0)))c+=60;
+  });
+  return c;
+}
+function planMany(k){
+  var t=Date.now(),pl=playingIds();
+  var w=S.players.filter(function(p){return p.active&&pl.indexOf(p.id)<0});
+  k=Math.min(k,Math.floor(w.length/4));
+  if(k<1)return [];
+  var rs=w.filter(function(p){return p.fresh&&!p.b2b}),av=w.filter(function(p){return !(p.fresh&&!p.b2b)});
+  if(av.length<4*k)av=av.concat(shuffle(rs).slice(0,4*k-av.length));
+  w=av;
+  var order=shuffle(w).sort(function(a,b){return a.games-b.games||(t-(b.waitSince||t))-(t-(a.waitSince||t))});
+  var minG=order[0].games,pool=order.filter(function(p){return p.games<=minG+1}).slice(0,4*k+4);
+  if(pool.length<4*k+1)pool=order.slice(0,Math.min(order.length,4*k+4));
+  var ids=pool.map(function(p){return p.id}),rank={};ids.forEach(function(id,i){rank[id]=i});
+  var modes=[],i;for(i=0;i<k;i++)modes.push(S.mode==="auto"?((S.gcount+i)%2===0?"near":"mix"):S.mode);
+  var score=function(g){var c=0;for(var j=0;j<k;j++)c+=mcost(g.slice(4*j,4*j+4),modes[j],ids,rank);return c};
+  var best=ids.slice(),bc=score(best),g,c;
+  for(i=0;i<1500;i++){g=shuffle(ids);c=score(g);if(c<bc){bc=c;best=g}}
+  for(i=0;i<4000;i++){g=best.slice();var a=Math.floor(Math.random()*g.length),b=Math.floor(Math.random()*g.length),tp=g[a];g[a]=g[b];g[b]=tp;c=score(g);if(c<=bc){bc=c;best=g}}
+  var res=[];
+  for(i=0;i<k;i++){
+    var m=best.slice(4*i,4*i+4);
+    var bad=AR().filter(function(r){return r.k.charAt(0)==="b"&&rulePen(r.k,relOf(m,r.a,r.b)||"diff")>0}).map(function(r){return byId(r.a).name+" กับ "+byId(r.b).name});
+    res.push({m:m,md:modes[i],bad:bad});
+  }
+  return res;
+}
+function propose(){var r=planMany(1);return r.length?r[0]:null}
+function validNext(){
+  var n=S.next;if(!n)return null;var pl=playingIds();
+  for(var i=0;i<4;i++){var p=byId(n.m[i]);if(!p||!p.active||pl.indexOf(n.m[i])>=0)return null}
+  return n;
+}
+function startMatch(i,m,md){
+  var t=Date.now();S.slots[i]={m:m,md:md,t:t};
+  S.partner[key(m[0],m[1])]=(S.partner[key(m[0],m[1])]||0)+1;
+  S.partner[key(m[2],m[3])]=(S.partner[key(m[2],m[3])]||0)+1;
+  [[0,2],[0,3],[1,2],[1,3]].forEach(function(q){var k=key(m[q[0]],m[q[1]]);S.opp[k]=(S.opp[k]||0)+1});
+  m.forEach(function(id){var p=byId(id);if(!p)return;p.fresh=false;p.games++;p[md]++;if(p.waitSince){p.waitMs+=t-p.waitSince;p.waitSince=null}});
+  var pl2=playingIds();S.players.forEach(function(p){if(p.fresh&&pl2.indexOf(p.id)<0)p.fresh=false});
+  S.gcount++;
+}
+function startFromNext(i){
+  var nx=validNext()||propose();
+  if(!nx)return false;
+  startMatch(i,nx.m,nx.md);S.next=null;
+  if(nx.bad&&nx.bad.length)say("เลี่ยงเงื่อนไขไม่ได้ในเกมนี้: "+nx.bad.join(", "));
+  return true;
+}
+function finishCourt(i){
+  var s=S.slots[i];if(!s)return;var t=Date.now();
+  s.m.forEach(function(id){var p=byId(id);if(p){p.fresh=true;if(p.active)p.waitSince=t}});
+  S.slots[i]=null;fixSlots();save();render();
+}
+function fillAll(){
+  var empt=[];for(var i=0;i<S.slots.length;i++)if(!S.slots[i])empt.push(i);
+  if(!empt.length)return 0;
+  var plan=planMany(empt.length),bad=[];
+  plan.forEach(function(p,j){startMatch(empt[j],p.m,p.md);bad=bad.concat(p.bad)});
+  S.next=null;
+  if(bad.length)say("เลี่ยงเงื่อนไขไม่ได้: "+bad.join(", "));
+  return plan.length;
+}
+
+var PK=null;
+function waitingList(){var pl=playingIds();return S.players.filter(function(p){return p.active&&pl.indexOf(p.id)<0})}
+function fillRandom(fx){
+  var t=Date.now(),fixed=fx.filter(Boolean),need=4-fixed.length;
+  if(!need)return fx.slice();
+  var w=waitingList().filter(function(p){return fixed.indexOf(p.id)<0});
+  if(w.length<need)return null;
+  var av=w.filter(function(p){return !(p.fresh&&!p.b2b)});
+  if(av.length<need)av=av.concat(shuffle(w.filter(function(p){return p.fresh&&!p.b2b})).slice(0,need-av.length));
+  var order=shuffle(av).sort(function(a,b){return a.games-b.games||(t-(b.waitSince||t))-(t-(a.waitSince||t))}).slice(0,need+4);
+  var cand=order.map(function(p){return p.id}),ids=fixed.concat(cand),rank={};
+  fixed.forEach(function(id){rank[id]=0});cand.forEach(function(id,i){rank[id]=i});
+  var md=S.mode==="auto"?(S.gcount%2===0?"near":"mix"):S.mode,best=null,bc=1e9;
+  for(var n=0;n<600;n++){var c=shuffle(cand).slice(0,need),k=0,g=fx.map(function(id){return id||c[k++]}),cost=mcost(g,md,ids,rank);if(cost<bc){bc=cost;best=g}}
+  return best;
+}
+function startPick(){
+  var i=PK.i,fx=PK.sel.map(Number),fixed=fx.filter(Boolean);
+  if(S.slots[i]){PK=null;render();return}
+  if(fixed.some(function(id,j){return fixed.indexOf(id)!==j})){say("เลือกคนซ้ำกัน");return}
+  var wl=waitingList().map(function(p){return p.id});
+  if(fixed.some(function(id){return wl.indexOf(id)<0})){say("มีคนที่ไม่ได้อยู่ในคิวรอแล้ว เลือกใหม่");return}
+  var m=fillRandom(fx);
+  if(!m){say("ผู้เล่นที่รอไม่พอ 4 คน");return}
+  var l=m.map(L),sp=Math.max.apply(null,l)-Math.min.apply(null,l);
+  startMatch(i,m,sp<=1?"near":"mix");S.next=null;PK=null;say("");save();render();
+}
+function pickerH(){
+  var wl=waitingList(),ids=wl.map(function(p){return p.id});
+  PK.sel=PK.sel.map(function(v){return ids.indexOf(+v)>=0?+v:0});
+  var h='<div class="muted" style="color:#fff">ทีม A</div>';
+  [0,1,2,3].forEach(function(j){
+    if(j===2)h+='<div class="muted" style="color:#fff;margin-top:8px">ทีม B</div>';
+    h+='<select data-pk="'+j+'" aria-label="ผู้เล่นช่อง '+(j+1)+'"><option value="0">สุ่ม</option>'+wl.map(function(p){
+      var used=PK.sel.some(function(v,q){return q!==j&&+v===p.id});
+      return '<option value="'+p.id+'"'+(PK.sel[j]===p.id?" selected":"")+(used?" disabled":"")+'>'+esc(p.name)+' ('+p.level+')</option>'}).join("")+'</select>';
+  });
+  return h+'<button data-pkgo="1">ลงคอร์ท (ช่อง “สุ่ม” ระบบเติมให้)</button><button data-pkx="1">ยกเลิก</button>';
+}
+/* ---------- แสดงผล ---------- */
+function nmH(id){var p=byId(id);return p?esc(p.name)+' <small>(Lv'+p.level+')</small>':"?"}
+function sum2(a,b){return L(a)+L(b)}
+function renderRules(){
+  var sa=$("ra"),sb=$("rb"),va=sa.value,vb=sb.value;
+  var opts=S.players.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>'}).join("");
+  sa.innerHTML=opts;sb.innerHTML=opts;if(va)sa.value=va;if(vb)sb.value=vb;
+  var ul=$("rlist");ul.innerHTML=S.rules.length?"":'<li class="muted">ยังไม่มีเงื่อนไข</li>';
+  S.rules.forEach(function(r){
+    var a=byId(r.a),b=byId(r.b);if(!a||!b)return;
+    var li=document.createElement("li");
+    if(r.on===false)li.className="rest";
+    li.innerHTML='<input type="checkbox" class="ron2" aria-label="ใช้เงื่อนไขนี้"'+(r.on!==false?" checked":"")+'><span class="nm">'+esc(a.name)+' กับ '+esc(b.name)+': '+KN[r.k]+'</span><button class="x" aria-label="ลบเงื่อนไข">ลบ</button>';
+    li.querySelector(".ron2").onchange=function(e){r.on=e.target.checked;S.next=null;save();render()};
+    li.querySelector("button").onclick=function(){S.rules=S.rules.filter(function(q){return q.id!==r.id});save();render()};
+    ul.appendChild(li);
+  });
+}
+function renderHistory(){
+  var box=$("hist");
+  if(!S.history.length){box.innerHTML='<div class="empty">ยังไม่มีประวัติ กด “เริ่มวันใหม่” เพื่อบันทึกวันนี้</div>';return}
+  box.innerHTML="";
+  S.history.forEach(function(d,i){
+    var dt=new Date(d.at),el=document.createElement("details");
+    var title=dt.toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"})+" เริ่ม "+pad(dt.getHours())+":"+pad(dt.getMinutes())+" น.";
+    el.innerHTML='<summary style="cursor:pointer;padding:8px 0"><b>'+title+'</b> รวม '+d.total+' บาท</summary><div class="scroll"><table><thead><tr><th>ชื่อ</th><th>ประเภท</th><th>เกม</th><th>รอ (นาที)</th><th>บาท</th></tr></thead><tbody>'+d.rows.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td>'+(r.gk?"GK":"ลูกค้า")+'</td><td>'+r.games+'</td><td>'+r.wait+'</td><td>'+r.fee+(r.capped?'*':'')+'</td></tr>'}).join("")+'</tbody></table></div><div class="row" style="margin:8px 0 12px"><button class="hpdf">ส่งออก PDF</button><button class="del">ลบวันนี้ออกจากประวัติ</button></div>';
+    el.querySelector(".hpdf").onclick=function(){exportPdf(rowsHist(d),d.at,d.games)};
+    el.querySelector(".del").onclick=function(){ask("ลบประวัติวันนี้?",function(){S.history.splice(i,1);dayDel(d.at);save();render()})};
+    box.appendChild(el);
+  });
+}
+function render(){
+  fixSlots();
+  $("count").textContent="มาวันนี้ "+S.players.filter(function(p){return p.active}).length+" จาก "+S.players.length+" คน";
+  renderRules();renderHistory();
+  $("courts").value=S.courts;$("hours").value=S.hours;$("mode").value=S.mode;
+  $("gen").textContent=S.startedAt?"จัดลงคอร์ทที่ว่างทั้งหมด":"เริ่ม";
+  var playing=playingIds();
+  var ul=$("plist");ul.innerHTML="";
+  var pf=S.players.filter(function(p){return hit(p,Q.p)&&(Q.f!=="today"||p.active)});
+  if(!pf.length&&Q.p)ul.innerHTML='<li class="muted">ไม่พบชื่อที่ค้นหา</li>';
+  pf.forEach(function(p){
+    var li=document.createElement("li");if(!p.active)li.className="rest";
+    var st=!S.startedAt||!p.active?"":(playing.indexOf(p.id)>=0?"กำลังเล่น":'<span class="wt" data-id="'+p.id+'"></span>');
+    li.innerHTML='<input type="checkbox" aria-label="พร้อมเล่น '+esc(p.name)+'"'+(p.active?" checked":"")+'><span class="nm">'+esc(p.name)+'</span><select class="lv" aria-label="ระดับฝีมือ '+esc(p.name)+'">'+lvOpts(p.level)+'</select><select class="lv gk" aria-label="ประเภท '+esc(p.name)+'"><option value="cu"'+(p.gk?"":" selected")+'>ลูกค้า</option><option value="gk"'+(p.gk?" selected":"")+'>GK</option></select><label class="cnt"><input type="checkbox" class="b2c"'+(p.b2b?" checked":"")+' aria-label="ลง 2 เกมติดได้ '+esc(p.name)+'"> ติด2เกม</label><span class="cnt">'+st+'</span><button class="x" aria-label="ลบ '+esc(p.name)+'">ลบ</button>';
+    li.querySelector("input").onchange=function(e){
+      p.active=e.target.checked;
+      if(S.startedAt){var t=Date.now();
+        if(p.active){if(playing.indexOf(p.id)<0)p.waitSince=t}
+        else if(p.waitSince){p.waitMs+=t-p.waitSince;p.waitSince=null}}
+      save();render()};
+    li.querySelector("select").onchange=function(e){p.level=parseInt(e.target.value,10);save();render()};
+    li.querySelector("select.gk").onchange=function(e){p.gk=e.target.value==="gk";save();render()};
+    li.querySelector(".b2c").onchange=function(e){p.b2b=e.target.checked;S.next=null;save();render()};
+    li.querySelector(".x").onclick=function(){if(playing.indexOf(p.id)>=0){say(p.name+" กำลังเล่นอยู่ ลบไม่ได้");return}ask("ลบ "+p.name+" ออกจากฐานข้อมูลถาวร?",function(){S.players=S.players.filter(function(q){return q.id!==p.id});S.rules=S.rules.filter(function(r){return r.a!==p.id&&r.b!==p.id});save();render()})};
+    ul.appendChild(li);
+  });
+  var out=$("out");
+  if(!S.startedAt){out.innerHTML='<div class="empty">ติ๊ก “มาตีวันนี้” อย่างน้อย 4 คน แล้วกด “เริ่ม”</div>'}
+  else{
+    if(PK&&S.slots[PK.i])PK=null;
+    var h='<h2 style="margin-top:16px">คอร์ท</h2><div class="courts">',empties=[];
+    S.slots.forEach(function(s,i){
+      if(s){
+        h+='<div class="court"><h3>คอร์ท '+(i+1)+' ('+MD(s.md)+') <small class="ct" data-i="'+i+'"></small></h3><div class="half"><div class="team"><span>'+nmH(s.m[0])+'</span><span>'+nmH(s.m[1])+'</span><small>ผลรวม '+sum2(s.m[0],s.m[1])+'</small></div><div class="team"><span>'+nmH(s.m[2])+'</span><span>'+nmH(s.m[3])+'</span><small>ผลรวม '+sum2(s.m[2],s.m[3])+'</small></div></div><button data-fin="'+i+'">จบเกมคอร์ทนี้</button></div>';
+      }else{empties.push(i);h+='<div class="court idle"><h3>คอร์ท '+(i+1)+' (ว่าง)</h3>'+(PK&&PK.i===i?pickerH():'<button data-go="'+i+'">สุ่มทั้งคอร์ท</button><button data-pick="'+i+'">เลือกคนเอง / สุ่มเติม</button>')+'</div>'}
+    });
+    h+='</div><div class="nxt"><h2>คู่ต่อไป</h2><div class="row"><button id="peek">ดูคู่ต่อไปใครเจอใคร</button>';
+    var nx=validNext();
+    if(nx)h+='<button id="rr">สุ่มคู่ใหม่</button>';
+    h+='</div>';
+    if(nx){
+      h+='<div class="nx"><b>'+nmH(nx.m[0])+' + '+nmH(nx.m[1])+'</b><br>พบกับ<br><b>'+nmH(nx.m[2])+' + '+nmH(nx.m[3])+'</b><br><span class="muted">'+MD(nx.md)+' ผลรวมระดับ '+sum2(nx.m[0],nx.m[1])+' กับ '+sum2(nx.m[2],nx.m[3])+'</span></div>';
+      if(nx.bad.length)h+='<div class="warn">เลี่ยงเงื่อนไขไม่ได้: '+nx.bad.map(esc).join(", ")+'</div>';
+      h+=empties.length?'<div class="row">'+empties.map(function(i){return '<button data-go="'+i+'">ลงคอร์ท '+(i+1)+'</button>'}).join("")+'</div>':'<div class="muted">ทุกคอร์ทกำลังเล่น กด “จบเกม” เมื่อคอร์ทไหนว่าง</div>';
+    }else h+='<div class="muted" style="margin-top:8px">กดปุ่มด้านบนเพื่อดูว่าคู่ถัดไปจะเป็นใคร (ยังไม่นับเป็นเกม)</div>';
+    var wt=S.players.filter(function(p){return p.active&&playing.indexOf(p.id)<0});
+    h+='</div><div class="waiting"><h2>พักอยู่ ('+wt.length+' คน)</h2>'+(wt.length?wt.map(function(p){return '<span class="chip">'+nmH(p.id)+(p.fresh&&!p.b2b?' <small>(พักก่อน)</small>':'')+' <span class="wt" data-id="'+p.id+'"></span></span>'}).join(""):'<span class="muted">ไม่มี</span>')+'</div>';
+    out.innerHTML=h;
+    out.querySelectorAll("[data-fin]").forEach(function(b){b.onclick=function(){finishCourt(+b.dataset.fin)}});
+    out.querySelectorAll("[data-go]").forEach(function(b){b.onclick=function(){say("");if(!startFromNext(+b.dataset.go))say("ผู้เล่นที่รอไม่พอ 4 คน");save();render()}});
+    out.querySelectorAll("[data-pick]").forEach(function(b){b.onclick=function(){PK={i:+b.dataset.pick,sel:[0,0,0,0]};render()}});
+    out.querySelectorAll("[data-pk]").forEach(function(sl){sl.onchange=function(){PK.sel[+sl.dataset.pk]=+sl.value;render()}});
+    out.querySelectorAll("[data-pkgo]").forEach(function(b){b.onclick=startPick});
+    out.querySelectorAll("[data-pkx]").forEach(function(b){b.onclick=function(){PK=null;render()}});
+    var pk=$("peek"),rr=$("rr");
+    var peek=function(){say("");var n=propose();if(!n){S.next=null;say("ผู้เล่นที่รอไม่พอ 4 คน")}else S.next=n;save();render()};
+    if(pk)pk.onclick=peek;if(rr)rr.onclick=peek;
+  }
+  var rows=S.players.filter(function(p){return p.active||p.games>0}).sort(function(a,b){return b.games-a.games||a.name.localeCompare(b.name)});
+  var vis=rows.filter(function(p){return hit(p,Q.s)});
+  $("sum").innerHTML=rows.length?'<table><thead><tr><th>ชื่อ</th><th>ระดับ</th><th>ประเภท</th><th>เกมรวม</th><th>ติดกัน</th><th>ตีคุม</th><th>รอรวม</th><th>ค่าสนาม</th><th>ค่าลูก</th><th>รวม (บาท)</th></tr></thead><tbody>'+vis.map(function(p){var b=bill(p);return '<tr><td>'+esc(p.name)+'</td><td>'+p.level+'</td><td>'+(p.gk?"GK":"ลูกค้า")+'</td><td><b>'+p.games+'</b></td><td>'+p.near+'</td><td>'+p.mix+'</td><td><span class="wm" data-id="'+p.id+'"></span></td><td>'+b.court+'</td><td>'+b.ball+'</td><td><b>'+b.sum+(b.capped?'*':'')+'</b></td></tr>'}).join("")+'</tbody><tfoot><tr><td colspan="9"><b>รวมทั้งหมด (บาท)'+(Q.s?' (ทุกคน แสดง '+vis.length+' จาก '+rows.length+' คน)':'')+'</b></td><td><b>'+rows.reduce(function(s,p){return s+bill(p).sum},0)+'</b></td></tr></tfoot></table>':'<div class="empty">ยังไม่มีผู้เล่นที่มาตีวันนี้</div>';
+  tick();
+}
+function tick(){
+  var t=Date.now();
+  document.querySelectorAll(".wt").forEach(function(e){var p=byId(+e.dataset.id);if(p)e.textContent=p.waitSince?"รอ "+ms(t-p.waitSince):""});
+  document.querySelectorAll(".wm").forEach(function(e){var p=byId(+e.dataset.id);if(p)e.textContent=S.startedAt?Math.floor(total(p)/60000)+" นาที":"-"});
+  document.querySelectorAll(".ct").forEach(function(e){var s=S.slots[+e.dataset.i];e.textContent=s?"เล่นมา "+ms(t-s.t):""});
+  var c=$("clock");
+  if(S.startedAt){
+    var el=t-S.startedAt,tot=S.hours*3600000;c.hidden=false;
+    c.textContent=el>=tot?"ครบ "+S.hours+" ชั่วโมงแล้ว (เล่นมา "+hms(el)+")":"เล่นมาแล้ว "+hms(el)+" จาก "+S.hours+" ชั่วโมง เหลือ "+hms(tot-el);
+  }else c.hidden=true;
+}
+
+/* ---------- ปุ่มต่างๆ ---------- */
+function addPlayers(){
+  var msg=$("addmsg");
+  var names=$("names").value.split(/[\n,]+/).map(function(x){return x.trim()}).filter(Boolean);
+  if(!names.length){msg.textContent="พิมพ์ชื่อก่อน";return}
+  var lvl=parseInt($("lvl").value,10)||3,t=Date.now(),now=$("addnow").checked,gk=$("who").value==="gk";
+  var added=[],woke=[],same=[],pl=playingIds();
+  names.forEach(function(n){
+    var p=S.players.filter(function(q){return q.name===n})[0];
+    if(p){
+      if(now&&!p.active){p.active=true;if(S.startedAt&&pl.indexOf(p.id)<0)p.waitSince=t;woke.push(n)}
+      else same.push(n);
+      return;
+    }
+    S.players.push({id:S.nid++,name:n,level:lvl,gk:gk,active:now,games:0,near:0,mix:0,waitMs:0,waitSince:(now&&S.startedAt)?t:null});
+    added.push(n);
+  });
+  var out=[];
+  if(added.length)out.push("เพิ่มแล้ว: "+added.join(", ")+" ("+(gk?"GK":"ลูกค้า")+", ระดับ "+lvl+(now?", เข้าคิวรอ":", ยังไม่ติ๊กมาตีวันนี้")+")");
+  if(woke.length)out.push("มีชื่ออยู่แล้ว ติ๊กมาตีวันนี้ให้แล้ว: "+woke.join(", "));
+  if(same.length)out.push("มีชื่ออยู่แล้ว (ไม่เปลี่ยนแปลง): "+same.join(", "));
+  msg.textContent=out.join(" | ");
+  $("names").value="";S.next=null;save();render();
+}
+$("b2all").onclick=function(){S.players.forEach(function(p){p.b2b=true});S.next=null;save();render()};
+$("b2none").onclick=function(){S.players.forEach(function(p){p.b2b=false});S.next=null;save();render()};
+$("radd").onclick=function(){var a=parseInt($("ra").value,10),b=parseInt($("rb").value,10);if(!a||!b){say("เพิ่มผู้เล่นก่อน");return}if(a===b){say("ต้องเลือกคนละคนกัน");return}S.rules.push({id:S.nid++,a:a,b:b,k:$("rk").value,on:$("ron").checked});S.next=null;say("");save();render()};
+$("qp").oninput=function(){Q.p=this.value.trim().toLowerCase();render()};
+$("qf").onchange=function(){Q.f=this.value;render()};
+$("qs").oninput=function(){Q.s=this.value.trim().toLowerCase();render()};
+$("add").onclick=addPlayers;
+$("names").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();addPlayers();$("names").focus()}};
+$("courts").onchange=function(){var v=parseInt($("courts").value,10);S.courts=isNaN(v)?1:Math.max(1,Math.min(12,v));save();render()};
+$("hours").onchange=function(){var v=parseFloat($("hours").value);S.hours=isNaN(v)?3:Math.max(0.5,Math.min(12,v));save();render()};
+$("mode").onchange=function(){S.mode=$("mode").value;S.next=null;save();render()};
+$("gen").onclick=function(){
+  say("");
+  if(!S.startedAt){
+    if(S.players.filter(function(p){return p.active}).length<4){say("ต้องติ๊ก “มาตีวันนี้” อย่างน้อย 4 คน");return}
+    var t=Date.now();S.startedAt=t;S.players.forEach(function(p){p.waitSince=p.active?t:null});
+  }
+  fixSlots();
+  if(!fillAll()&&!$("msg").textContent)say("ไม่มีคอร์ทว่าง หรือผู้เล่นที่รอไม่พอ 4 คน");
+  save();render();
+};
+function wipeDay(){S.players.forEach(function(p){p.games=0;p.near=0;p.mix=0;p.waitMs=0;p.waitSince=null;p.fresh=false});S.gcount=0;S.partner={};S.opp={};S.slots=[];S.next=null;S.startedAt=null}
+$("newday").onclick=function(){
+  if(!S.gcount){say("ยังไม่มีเกมในวันนี้ จึงไม่มีอะไรให้บันทึก");return}
+  ask("บันทึกสรุปวันนี้ลงประวัติ แล้วเริ่มวันใหม่? (รายชื่อ ระดับ ประเภท และเงื่อนไขพิเศษยังอยู่ แต่การติ๊กมาตีวันนี้จะถูกล้างทั้งหมด)",function(){
+  var rows=S.players.filter(function(p){return p.games>0}).sort(function(a,b){return b.games-a.games}).map(function(p){var b=bill(p);return{name:p.name,level:p.level,gk:p.gk,games:p.games,near:p.near,mix:p.mix,wait:Math.floor(total(p)/60000),fee:b.sum,capped:b.capped}});
+  S.history.unshift({at:S.startedAt||Date.now(),games:S.gcount,total:rows.reduce(function(s,r){return s+r.fee},0),rows:rows});dayPut(S.history[0]);
+  wipeDay();S.players.forEach(function(p){p.active=false});fixSlots();say("");save();render();
+  });
+};
+$("reset").onclick=function(){
+  ask("ล้างเกม เวลารอ และประวัติการจับคู่ทั้งหมด แล้วเริ่มใหม่ โดยไม่บันทึกลงประวัติ? (รายชื่อผู้เล่นยังอยู่)",function(){wipeDay();fixSlots();say("");save();render()});
+};
+
+/* ---------- กล่องยืนยัน ---------- */
+function ask(msg,ok){
+  var d=$("dlg");
+  if(!d||!d.showModal){if(window.confirm(msg))ok();return}
+  $("dmsg").textContent=msg;
+  $("dyes").onclick=function(){d.close();ok()};
+  $("dno").onclick=function(){d.close()};
+  d.showModal();
+}
+/* ---------- ส่งออกรูป / PDF ---------- */
+var F='"Prompt",system-ui,sans-serif';
+var COLS=[
+  {h:"ชื่อ",w:240,a:"left",v:function(r){return r.name}},
+  {h:"ประเภท",w:90,a:"center",v:function(r){return r.gk?"GK":"ลูกค้า"}},
+  {h:"เกม",w:70,a:"right",v:function(r){return ""+r.games}},
+  {h:"รอ (นาที)",w:110,a:"right",v:function(r){return ""+r.wait}},
+  {h:"ค่าสนาม",w:90,a:"right",v:function(r){return ""+r.court}},
+  {h:"ค่าลูก",w:90,a:"right",v:function(r){return ""+r.ball}},
+  {h:"รวม (บาท)",w:110,a:"right",v:function(r){return r.sum+(r.capped?"*":"")}}
+];
+var PW=24,RH=38,HEAD=84,TW=PW*2+COLS.reduce(function(s,c){return s+c.w},0),PH=Math.round(TW*841.89/595.28),PER=22;
+function rowsToday(){
+  return S.players.filter(function(p){return p.active||p.games>0}).sort(function(a,b){return b.games-a.games||a.name.localeCompare(b.name)}).map(function(p){var b=bill(p);return{name:p.name,gk:p.gk,games:p.games,wait:Math.floor(total(p)/60000),court:b.court,ball:b.ball,sum:b.sum,capped:b.capped}});
+}
+function rowsHist(d){
+  return d.rows.map(function(r){var rt=r.gk?PR.gk:PR.cu;return{name:r.name,gk:r.gk,games:r.games,wait:r.wait,court:r.games?rt.court:0,ball:rt.ball*r.games,sum:r.fee,capped:r.capped}});
+}
+function grandOf(rows){return rows.reduce(function(s,r){return s+r.sum},0)}
+function subOf(t,games){return new Date(t).toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"})+"  ·  "+games+" เกม"}
+function fname(pre,ext,t){var d=new Date(t);return pre+"-"+d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"."+ext}
+function ready(){
+  if(!(document.fonts&&document.fonts.load))return Promise.resolve();
+  return Promise.all([document.fonts.load('400 14px Prompt','ก'),document.fonts.load('600 14px Prompt','ก')]).catch(function(){});
+}
+function dl(blob,name){
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+}
+function drawTable(rows,H,sub,pg,grand){
+  var W=TW,SC=2,c=document.createElement("canvas");c.width=W*SC;c.height=H*SC;
+  var x=c.getContext("2d");x.scale(SC,SC);x.textBaseline="middle";
+  x.fillStyle="#fff";x.fillRect(0,0,W,H);
+  x.fillStyle="#16221b";x.font="600 22px "+F;x.textAlign="left";x.fillText("สรุปการตีแบต",PW,30);
+  x.fillStyle="#5d6b62";x.font="400 14px "+F;x.fillText(sub,PW,56);
+  if(pg){x.textAlign="right";x.fillText(pg,W-PW,30)}
+  function cut(t,max){
+    if(x.measureText(t).width<=max)return t;
+    while(t.length>1&&x.measureText(t+"…").width>max)t=t.slice(0,-1);
+    return t+"…";
+  }
+  function cell(txt,ci,y){
+    var cx=PW;for(var i=0;i<ci;i++)cx+=COLS[i].w;
+    var col=COLS[ci];x.textAlign=col.a;
+    var px=col.a==="left"?cx+8:col.a==="right"?cx+col.w-8:cx+col.w/2;
+    x.fillText(col.a==="left"?cut(txt,col.w-16):txt,px,y);
+  }
+  var y=HEAD;
+  x.fillStyle="#1f6f50";x.fillRect(PW,y,W-PW*2,RH);
+  x.fillStyle="#fff";x.font="600 14px "+F;
+  COLS.forEach(function(col,i){cell(col.h,i,y+RH/2)});
+  rows.forEach(function(r,i){
+    y=HEAD+RH*(i+1);
+    if(i%2){x.fillStyle="#f3f6f2";x.fillRect(PW,y,W-PW*2,RH)}
+    x.fillStyle="#16221b";
+    COLS.forEach(function(col,j){x.font=(j===2||j===6?"600 ":"400 ")+"14px "+F;cell(col.v(r),j,y+RH/2)});
+    x.strokeStyle="#d9e1d9";x.beginPath();x.moveTo(PW,y+RH);x.lineTo(W-PW,y+RH);x.stroke();
+  });
+  if(grand!=null){
+    y=HEAD+RH*(rows.length+1);
+    x.fillStyle="#fff6cc";x.fillRect(PW,y,W-PW*2,RH);
+    x.fillStyle="#16221b";x.font="600 15px "+F;
+    x.textAlign="left";x.fillText("รวมทั้งหมด (บาท)",PW+8,y+RH/2);
+    x.textAlign="right";x.fillText(""+grand,W-PW-8,y+RH/2);
+    x.fillStyle="#5d6b62";x.font="400 12px "+F;x.textAlign="left";
+    x.fillText("* ถึงเพดานราคาสูงสุดแล้ว",PW,y+RH+20);
+  }
+  return c;
+}
+function exportImg(rows,t,games){
+  if(!rows.length){say("ยังไม่มีข้อมูลให้บันทึก");return}
+  say("");
+  ready().then(function(){
+    var c=drawTable(rows,HEAD+RH*(rows.length+2)+40,subOf(t,games),"",grandOf(rows));
+    c.toBlob(function(b){if(!b){say("สร้างรูปไม่สำเร็จ");return}dl(b,fname("badminton","png",t))},"image/png");
+  });
+}
+/* สร้างไฟล์ PDF เอง (หน้าละ 1 รูป JPEG) ไม่ใช้ไลบรารี และแสดงภาษาไทยได้ครบ */
+function makePdf(imgs){
+  var parts=[],off=0,xr=[],n=imgs.length;
+  function add(v){
+    if(typeof v==="string"){var b=new Uint8Array(v.length);for(var i=0;i<v.length;i++)b[i]=v.charCodeAt(i)&255;v=b}
+    parts.push(v);off+=v.length;
+  }
+  function obj(id,s){xr[id]=off;add(id+" 0 obj\n"+s+"\nendobj\n")}
+  add("%PDF-1.4\n");
+  obj(1,"<</Type/Catalog/Pages 2 0 R>>");
+  var kids=[];for(var i=0;i<n;i++)kids.push((3+3*i)+" 0 R");
+  obj(2,"<</Type/Pages/Kids["+kids.join(" ")+"]/Count "+n+">>");
+  imgs.forEach(function(im,i){
+    var pg=3+3*i,ct=4+3*i,ig=5+3*i,cs="q 595.28 0 0 841.89 0 0 cm /Im0 Do Q";
+    obj(pg,"<</Type/Page/Parent 2 0 R/MediaBox[0 0 595.28 841.89]/Resources<</XObject<</Im0 "+ig+" 0 R>>>>/Contents "+ct+" 0 R>>");
+    obj(ct,"<</Length "+cs.length+">>\nstream\n"+cs+"\nendstream");
+    xr[ig]=off;
+    add(ig+" 0 obj\n<</Type/XObject/Subtype/Image/Width "+im.w+"/Height "+im.h+"/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length "+im.data.length+">>\nstream\n");
+    add(im.data);add("\nendstream\nendobj\n");
+  });
+  var size=3+3*n,start=off,xt="xref\n0 "+size+"\n0000000000 65535 f \n";
+  for(var k=1;k<size;k++)xt+=("0000000000"+xr[k]).slice(-10)+" 00000 n \n";
+  add(xt+"trailer\n<</Size "+size+"/Root 1 0 R>>\nstartxref\n"+start+"\n%%EOF");
+  return new Blob(parts,{type:"application/pdf"});
+}
+function exportPdf(rows,t,games){
+  if(!rows.length){say("ยังไม่มีข้อมูลให้ส่งออก");return}
+  say("");
+  ready().then(function(){
+    var pages=Math.ceil(rows.length/PER),grand=grandOf(rows),imgs=[];
+    for(var i=0;i<pages;i++){
+      var c=drawTable(rows.slice(i*PER,(i+1)*PER),PH,subOf(t,games),pages>1?"หน้า "+(i+1)+"/"+pages:"",i===pages-1?grand:null);
+      var bin=atob(c.toDataURL("image/jpeg",0.92).split(",")[1]),u=new Uint8Array(bin.length);
+      for(var j=0;j<bin.length;j++)u[j]=bin.charCodeAt(j);
+      imgs.push({data:u,w:c.width,h:c.height});
+    }
+    dl(makePdf(imgs),fname("badminton","pdf",t));
+  });
+}
+$("saveimg").onclick=function(){exportImg(rowsToday(),S.startedAt||Date.now(),S.gcount)};
+$("savepdf").onclick=function(){exportPdf(rowsToday(),S.startedAt||Date.now(),S.gcount)};
+
+/* ---------- สำรอง / นำเข้าข้อมูล ---------- */
+function updBk(m){
+  $("bkinfo").textContent=m||(S.lastBackup?"สำรองล่าสุด "+new Date(S.lastBackup).toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"ยังไม่เคยสำรองข้อมูลบนเครื่องนี้ แนะนำให้สำรองหลังจบวันทุกครั้ง");
+}
+function bkExport(){
+  var t=new Date();S.lastBackup=t.getTime();save();
+  var blob=new Blob([JSON.stringify({app:"badminton-pairing",version:3,exportedAt:t.toISOString(),data:S})],{type:"application/json"});
+  dl(blob,"badminton-backup-"+t.getFullYear()+"-"+pad(t.getMonth()+1)+"-"+pad(t.getDate())+"-"+pad(t.getHours())+pad(t.getMinutes())+".json");
+  updBk("สำรองข้อมูลแล้ว เก็บไฟล์ที่ดาวน์โหลดไว้ในที่ปลอดภัย (เช่น Google Drive หรือไลน์ตัวเอง)");
+}
+function bkApply(d){
+  var base={players:[],rules:[],history:[],slots:[],next:null,gcount:0,partner:{},opp:{},courts:2,nid:1,mode:"auto",hours:3,startedAt:null};
+  Object.keys(S).forEach(function(k){delete S[k]});
+  Object.assign(S,base,d);
+  if(!Array.isArray(S.slots))S.slots=[];
+  S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
+  var mx=0;S.players.concat(S.rules).forEach(function(o){if(o.id>mx)mx=o.id});
+  S.nid=Math.max(S.nid||1,mx+1);
+  PK=null;S.next=null;fixSlots();save();pushAllDays();render();say("");updBk("นำเข้าข้อมูลเรียบร้อยแล้ว");
+}
+function bkImport(file){
+  var rd=new FileReader();
+  rd.onerror=function(){say("อ่านไฟล์ไม่ได้")};
+  rd.onload=function(){
+    var o,d;
+    try{o=JSON.parse(rd.result);d=o&&o.data?o.data:o}catch(e){d=null}
+    if(!d||!Array.isArray(d.players)||!Array.isArray(d.rules)||!Array.isArray(d.history)){say("ไฟล์นี้ไม่ใช่ไฟล์สำรองของแอพนี้");return}
+    ask("นำเข้าข้อมูลจากไฟล์ ("+d.players.length+" คน, ประวัติ "+d.history.length+" วัน)? ข้อมูลทั้งหมดบนเครื่องนี้จะถูกแทนที่",function(){bkApply(d)});
+  };
+  rd.readAsText(file);
+}
+$("bkexp").onclick=bkExport;
+$("bkimp").onclick=function(){$("bkfile").click()};
+$("bkfile").onchange=function(){var f=this.files[0];if(f)bkImport(f);this.value=""};
+updBk();
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){})}catch(e){}
+
+
+/* ---------- ซิงก์ข้ามเครื่อง (Firebase Firestore) ---------- */
+var RK="kdp-room",VIEW=/[?&]view=1/.test(location.search),CID=Math.random().toString(36).slice(2);
+var DB=null,ROOMREF=null,ROOM="",syncReady=false,wTimer=null,wBusy=false,wDirty=false,rTimer=null,seededDays=false;
+var BASE0={players:[],rules:[],history:[],slots:[],next:null,gcount:0,partner:{},opp:{},courts:2,nid:1,mode:"auto",hours:3,startedAt:null};
+function setSync(t,c){var e=$("sync");if(e){e.textContent=t;e.className="muted sync "+(c||"")}}
+function lsSave(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function normS(){
+  if(!Array.isArray(S.slots))S.slots=[];
+  S.players.forEach(function(p){p.level=p.level||3;if(p.gk===undefined)p.gk=false;p.near=p.near||0;p.mix=p.mix||0;p.waitMs=p.waitMs||0;if(p.waitSince===undefined)p.waitSince=null});
+  var mx=0;S.players.concat(S.rules).forEach(function(o){if(o.id>mx)mx=o.id});S.nid=Math.max(S.nid||1,mx+1);
+}
+function errTxt(e){return e&&e.code==="permission-denied"?"ไม่มีสิทธิ์ (ตรวจกฎ Firestore และรหัสห้อง)":(e&&(e.code||e.message))||"error"}
+function pushState(){if(!DB||VIEW||!syncReady)return;wDirty=true;clearTimeout(wTimer);wTimer=setTimeout(flush,600)}
+function flush(){
+  if(!DB||VIEW||!syncReady||wBusy||!wDirty)return;
+  wBusy=true;wDirty=false;
+  var c={};Object.keys(S).forEach(function(k){if(k!=="history"&&k!=="lastBackup")c[k]=S[k]});
+  ROOMREF.set({json:JSON.stringify(c),by:CID,t:Date.now()}).then(function(){
+    setSync("ซิงก์สดอยู่ (ล่าสุด "+new Date().toLocaleTimeString("th-TH")+")","ok");
+  }).catch(function(e){
+    setSync("ส่งข้อมูลไม่สำเร็จ: "+errTxt(e)+" (บันทึกในเครื่องแล้ว)","bad");
+    if(!e||e.code!=="permission-denied"){clearTimeout(rTimer);rTimer=setTimeout(function(){wDirty=true;flush()},5000)}
+  }).then(function(){wBusy=false;if(wDirty)flush()});
+}
+function adoptRemote(d){
+  if(!d||d.by===CID)return;
+  var n;try{n=JSON.parse(d.json)}catch(e){return}
+  var hist=S.history,lb=S.lastBackup;
+  Object.keys(S).forEach(function(k){delete S[k]});
+  Object.assign(S,BASE0,n);
+  S.history=hist||[];if(lb)S.lastBackup=lb;
+  normS();lsSave();fixSlots();render();fillSheetCfg();
+}
+function dayPut(d){if(!DB||VIEW||!d)return;ROOMREF.collection("days").doc("d"+d.at).set({at:d.at,json:JSON.stringify(d)}).catch(function(e){setSync("บันทึกประวัติรายวันไม่สำเร็จ: "+errTxt(e),"bad")})}
+function dayDel(at){if(!DB||VIEW)return;ROOMREF.collection("days").doc("d"+at).delete().catch(function(){})}
+function pushAllDays(){if(!DB||VIEW)return;S.history.forEach(dayPut)}
+function connect(){
+  var cfg=window.FB_CONFIG;
+  if(!window.firebase||!cfg){setSync("ใช้ข้อมูลเฉพาะเครื่องนี้ (โหลดระบบซิงก์ไม่ได้ ตรวจอินเทอร์เน็ต)","bad");return}
+  if(!ROOM){roomBox();return}
+  try{if(!firebase.apps.length)firebase.initializeApp(cfg);DB=firebase.firestore()}catch(e){setSync("เชื่อม Firebase ไม่ได้: "+e.message,"bad");return}
+  ROOMREF=DB.collection("rooms").doc(ROOM);
+  setSync("กำลังเชื่อมต่อ...","");
+  ROOMREF.onSnapshot(function(sn){
+    if(sn.metadata.fromCache&&!sn.exists)return;
+    if(sn.exists){adoptRemote(sn.data());syncReady=true;setSync(VIEW?"ดูอย่างเดียว (อัปเดตสด)":"ซิงก์สดอยู่ ทุกเครื่องเห็นข้อมูลเดียวกัน","ok")}
+    else{syncReady=true;if(!VIEW&&S.players.length){wDirty=true;flush();setSync("ส่งข้อมูลในเครื่องนี้ขึ้นห้องใหม่แล้ว","ok")}else setSync(VIEW?"ดูอย่างเดียว (ห้องนี้ยังไม่มีข้อมูล)":"เชื่อมต่อแล้ว ห้องนี้ยังว่าง","ok")}
+    fillSheetCfg();maybeAutoPull();
+  },function(e){setSync("อ่านข้อมูลไม่ได้: "+errTxt(e),"bad")});
+  ROOMREF.collection("days").orderBy("at","desc").limit(200).onSnapshot(function(q){
+    if(q.metadata.fromCache&&q.empty)return;
+    if(q.empty){if(!seededDays&&!VIEW&&S.history.length){seededDays=true;pushAllDays()}return}
+    var h=[];q.docs.forEach(function(x){try{h.push(JSON.parse(x.data().json))}catch(e){}});
+    S.history=h;lsSave();renderHistory();
+  },function(){});
+}
+function roomBox(){
+  var el=$("sync");el.className="muted sync";
+  el.innerHTML='ใส่รหัสห้องเพื่อซิงก์ข้ามเครื่อง: <input id="roomin" type="text" autocomplete="off" style="width:min(260px,60vw)"> <button id="roomgo">เชื่อมต่อ</button>';
+  $("roomgo").onclick=function(){
+    var v=$("roomin").value.trim();
+    if(v.length<8){say("รหัสห้องสั้นเกินไป (อย่างน้อย 8 ตัวอักษร)");return}
+    try{localStorage.setItem(RK,v)}catch(e){}
+    ROOM=v;say("");connect();
+  };
+}
+function copyLink(view){
+  if(!ROOM){say("ยังไม่ได้ตั้งรหัสห้อง");return}
+  var u=location.origin+location.pathname+(view?"?view=1":"")+"#"+encodeURIComponent(ROOM);
+  var ok=function(){say("คัดลอกลิงก์แล้ว วางส่งใน LINE ได้เลย")};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(u).then(ok,function(){say(u)});else say(u);
+}
+$("invedit").onclick=function(){copyLink(false)};
+$("invview").onclick=function(){copyLink(true)};
+/* ---------- นำเข้าจาก Google Sheet (คัดลอก-วาง) ---------- */
+function shImport(){
+  var msg=$("shmsg"),txt=$("shin").value.replace(/\r/g,"");
+  var lines=txt.split("\n").filter(function(l){return l.trim()});
+  if(lines.length<2){msg.textContent="วางข้อมูลพร้อมแถวหัวตารางก่อน";return}
+  var dl0=lines[0].indexOf("\t")>=0?"\t":",";
+  var h=lines[0].split(dl0).map(function(x){return x.trim()});
+  var c={no:h.indexOf("คนที่"),name:h.indexOf("ชื่อ"),cu:h.indexOf("ลูกค้า"),join:h.indexOf("Join"),sc:h.indexOf("ระดับคะแนน"),lv:h.indexOf("ระดับมือ")};
+  if(c.name<0||(c.sc<0&&c.lv<0)){msg.textContent="ไม่พบหัวคอลัมน์ “ชื่อ” และ “ระดับคะแนน” (หรือ “ระดับมือ”) ตรวจว่าคัดลอกแถวหัวตารางมาด้วย";return}
+  var LVM={NB:1,BG:2,N:3,S:4,P:5},seen={},list=[],bad=[];
+  for(var i=1;i<lines.length;i++){
+    var t=lines[i].split(dl0),raw=String(t[c.name]||"").trim();
+    if(!raw)continue;
+    var cu=(c.cu>=0&&String(t[c.cu]||"").trim()!=="")||/^C\s/i.test(raw);
+    var name=raw.replace(/^(GK|C)\s+/i,"").trim()||raw;
+    if(seen[name])name+=" ("+(c.no>=0?String(t[c.no]||"").trim():i)+")";
+    seen[name]=1;
+    var sc=c.sc>=0?Number(String(t[c.sc]||"").trim()):NaN,code=c.lv>=0?String(t[c.lv]||"").trim().toUpperCase():"";
+    var lv=(sc>=1&&sc<=5)?Math.round(sc):LVM[code];
+    if(!lv){bad.push(name);lv=3}
+    list.push({name:name,level:lv,gk:!cu,join:c.join>=0&&/^true$/i.test(String(t[c.join]||"").trim())});
+  }
+  if(!list.length){msg.textContent="ไม่พบรายชื่อ";return}
+  applyList(list,bad,$("shjoin").checked);
+}
+function applyList(list,bad,useJoin){
+  var msg=$("shmsg"),now=Date.now(),add=0,upd=0,pl=playingIds();
+  list.forEach(function(x){
+    var p=S.players.filter(function(q){return q.name===x.name})[0];
+    if(!p){p={id:S.nid++,name:x.name,level:x.level,gk:x.gk,active:false,games:0,near:0,mix:0,waitMs:0,waitSince:null};S.players.push(p);add++}
+    else{p.level=x.level;p.gk=x.gk;upd++}
+    if(useJoin&&p.active!==x.join){
+      p.active=x.join;
+      if(S.startedAt){if(x.join){if(pl.indexOf(p.id)<0)p.waitSince=now}else if(p.waitSince){p.waitMs+=now-p.waitSince;p.waitSince=null}}
+    }
+  });
+  S.next=null;save();render();
+  var t="ดึงรายชื่อแล้ว: เพิ่มใหม่ "+add+" คน อัปเดต "+upd+" คน"+(useJoin?" มาตีวันนี้ "+list.filter(function(x){return x.join}).length+" คน":"")+(bad.length?" | อ่านระดับไม่ได้ (ใช้ 3 แทน): "+bad.join(", "):"");
+  msg.textContent=t;say(t);
+}
+$("shgo").onclick=shImport;
+/* ---------- ดึงจาก Google Sheet ตรงๆ (Apps Script) ---------- */
+function fillSheetCfg(){var c=S.sheet||{},u=$("shurl"),t=$("shtok");if(u&&document.activeElement!==u)u.value=c.url||"";if(t&&document.activeElement!==t)t.value=c.token||""}
+$("shsave").onclick=function(){
+  var u=$("shurl").value.trim(),t=$("shtok").value.trim();
+  if(!/^https:\/\/script\.google\.com\//.test(u)||!t){$("shmsg").textContent="ลิงก์ต้องขึ้นต้นด้วย https://script.google.com/ และต้องใส่รหัสผ่าน";return}
+  S.sheet={url:u,token:t};save();$("shmsg").textContent="บันทึกการเชื่อมต่อแล้ว กด “ดึงรายชื่อ/Join ตอนนี้” เพื่อทดสอบ";
+};
+function pullSheet(auto){
+  var c=S.sheet||{};
+  if(VIEW)return;
+  if(!c.url||!c.token){if(!auto)say("ยังไม่ได้ตั้งค่า Google Sheet (ดูหัวข้อ “เชื่อมต่อ Google Sheet” ท้ายหน้า)");return}
+  $("shmsg").textContent="กำลังดึงรายชื่อจาก Google Sheet...";
+  fetch(c.url+(c.url.indexOf("?")>=0?"&":"?")+"t="+encodeURIComponent(c.token)+"&_="+Date.now(),{cache:"no-store"})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(!d||!d.ok)throw new Error((d&&d.error)||"ตอบกลับไม่ถูกต้อง");
+      applyList(d.list||[],d.bad||[],true);
+    })
+    .catch(function(e){var t="ดึงจาก Google Sheet ไม่สำเร็จ: "+(e&&e.message||e)+" (ตรวจว่า Deploy เป็น Web app แบบ Anyone และรหัสผ่านถูกต้อง)";$("shmsg").textContent=t;if(!auto)say(t)});
+}
+$("shpull").onclick=function(){pullSheet(false)};
+$("pull").onclick=function(){pullSheet(false)};
+var autoDone=false;
+function maybeAutoPull(){if(autoDone)return;autoDone=true;if(!S.startedAt&&S.sheet&&S.sheet.url&&!VIEW)pullSheet(true)}
+/* ---------- เริ่มระบบซิงก์ ---------- */
+(function(){
+  var hv=decodeURIComponent((location.hash||"").replace(/^#/,"")).trim();
+  if(hv.length>=8){try{localStorage.setItem(RK,hv)}catch(e){}try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}}
+  try{ROOM=localStorage.getItem(RK)||""}catch(e){ROOM=""}
+  if(VIEW)document.body.classList.add("viewonly");
+  connect();
+  if(!DB)setTimeout(function(){fillSheetCfg();maybeAutoPull()},800);
+})();
+setInterval(tick,1000);
+render();
+})();
+
+</script>
+</body>
+</html>
