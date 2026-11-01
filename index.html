@@ -76,14 +76,6 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
     <section class="panel" aria-label="ผู้เล่น">
       <h2>ผู้เล่น (<span id="count"></span>)</h2>
       <div class="row viewhide" style="margin:0 0 10px"><button id="pull">ดึงรายชื่อ/Join จาก Google Sheet</button></div>
-      <label for="names" class="muted">ชื่อ (ใส่หลายชื่อได้ คั่นด้วยจุลภาค) และระดับฝีมือ</label>
-      <div class="row" style="margin-top:4px">
-        <input type="text" id="names" placeholder="เช่น ต้น" autocomplete="off">
-        <select id="lvl" aria-label="ระดับฝีมือ"><option value="1">1 เริ่มต้น</option><option value="2">2</option><option value="3" selected>3 กลาง</option><option value="4">4</option><option value="5">5 เก่งมาก</option></select>
-        <select id="who" aria-label="ประเภทผู้เล่น"><option value="cu" selected>ลูกค้า</option><option value="gk">คน GK</option></select>
-        <button id="add">เพิ่ม</button>
-      </div>
-      <label class="muted" style="display:block;margin-top:6px"><input type="checkbox" id="addnow"> ติ๊กว่ามาตีวันนี้ทันที</label>
       <div class="row" style="margin-top:10px"><input type="search" id="qp" placeholder="ค้นหาชื่อ" aria-label="ค้นหาชื่อผู้เล่น"><select id="qf" aria-label="แสดงรายชื่อ"><option value="all">ทั้งหมด</option><option value="today">เฉพาะที่มาวันนี้</option></select></div>
       <ul class="players" id="plist" style="margin-top:8px"></ul>
       <p class="muted">ติ๊กช่องหน้าชื่อ = มาตีวันนี้ ถ้ายังไม่ติ๊ก ชื่อจะถูกเก็บในฐานข้อมูลไว้เฉย ๆ และไม่เข้าระบบจัดคู่</p>
@@ -109,11 +101,25 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       <input type="search" id="qs" placeholder="ค้นหาชื่อเพื่อดูยอดเงิน" aria-label="ค้นหาชื่อในตารางสรุป" style="width:100%;margin-bottom:8px">
       <div class="scroll" id="sum"></div>
       <div class="row" style="margin-top:10px"><button id="savepdf">ส่งออกสรุปเป็น PDF</button><button id="saveimg">บันทึกสรุปเป็นรูป</button></div>
+      <p class="muted" id="expmsg" role="status"></p>
       <p class="muted">เกมติดกัน = ทั้ง 4 คนระดับห่างกันไม่เกิน 1 ตีคุม = ระดับห่างกันอย่างน้อย 2 แต่ผลรวมระดับของสองทีมเท่ากัน</p>
       <p class="muted">ค่าใช้จ่าย = ค่าสนาม + ค่าลูก x จำนวนเกม (คิดค่าสนามเมื่อเล่นอย่างน้อย 1 เกม) คน GK 85 + 23 ต่อเกม สูงสุด 200 บาท ลูกค้า 95 + 25 ต่อเกม สูงสุด 220 บาท เครื่องหมาย * คือถึงเพดานแล้ว</p>
       <div class="row" style="margin-top:12px"><button id="newday">เริ่มวันใหม่ (เก็บข้อมูลวันนี้)</button><button id="reset">ล้างโดยไม่บันทึก</button></div>
       <h2 style="margin-top:22px">ประวัติย้อนหลัง</h2>
       <div id="hist"></div>
+      <details class="viewhide" id="walkin" style="margin-top:22px">
+        <summary style="cursor:pointer;font-weight:600">เพิ่มผู้เล่นหน้างาน (ลูกค้าที่มาใหม่)</summary>
+        <p class="muted">พิมพ์ชื่อ เลือกระดับและประเภท แล้วกดเพิ่ม ใส่หลายชื่อได้โดยคั่นด้วยจุลภาค (ทุกชื่อจะได้ระดับและประเภทเดียวกัน) ถ้าชื่อมีอยู่ในรายชื่อแล้ว ระบบจะติ๊ก “มาตีวันนี้” ให้โดยไม่เปลี่ยนระดับเดิม</p>
+        <label for="names" class="muted">ชื่อ</label>
+        <div class="row" style="margin-top:4px">
+          <input type="text" id="names" placeholder="เช่น ต้น" autocomplete="off">
+          <select id="lvl" aria-label="ระดับฝีมือ"><option value="1">1 (NB)</option><option value="2">2 (BG)</option><option value="3" selected>3 (N)</option><option value="4">4 (S)</option><option value="5">5 (P)</option></select>
+          <select id="who" aria-label="ประเภทผู้เล่น"><option value="cu" selected>ลูกค้า</option><option value="gk">คน GK</option></select>
+          <button class="primary" id="add">เพิ่ม</button>
+        </div>
+        <label class="muted" style="display:block;margin-top:6px"><input type="checkbox" id="addnow" checked> ติ๊กว่ามาตีวันนี้ทันที (เข้าคิวรอเลย)</label>
+        <p class="muted" id="addmsg" role="status"></p>
+      </details>
       <h2 style="margin-top:22px">สำรองและย้ายข้อมูล</h2>
       <p class="muted">ข้อมูลทั้งหมด (รายชื่อ เงื่อนไข เกมวันนี้ ประวัติ) เก็บอยู่ในเบราว์เซอร์เครื่องนี้ กด “สำรองข้อมูล” เพื่อเก็บเป็นไฟล์ แล้วนำไปกด “นำเข้าข้อมูล” บนเครื่องอื่นได้</p>
       <div class="row"><button class="primary" id="bkexp">สำรองข้อมูล (ดาวน์โหลดไฟล์)</button><button id="bkimp">นำเข้าข้อมูลจากไฟล์</button><input type="file" id="bkfile" accept=".json,application/json" hidden></div>
@@ -135,6 +141,7 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       </div>
     </section>
   </div>
+<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v6 · 1 พ.ย. 2569 · แก้ปุ่มรูป/PDF + เพิ่มชื่อหน้างาน</p>
 </main>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -407,13 +414,27 @@ function tick(){
 
 /* ---------- ปุ่มต่างๆ ---------- */
 function addPlayers(){
-  var names=$("names").value.split(/[\n,]+/).map(function(s){return s.trim()}).filter(Boolean);
-  var lvl=parseInt($("lvl").value,10)||3,t=Date.now(),now=$("addnow").checked;
+  var msg=$("addmsg");
+  var names=$("names").value.split(/[\n,]+/).map(function(x){return x.trim()}).filter(Boolean);
+  if(!names.length){msg.textContent="พิมพ์ชื่อก่อน";return}
+  var lvl=parseInt($("lvl").value,10)||3,t=Date.now(),now=$("addnow").checked,gk=$("who").value==="gk";
+  var added=[],woke=[],same=[],pl=playingIds();
   names.forEach(function(n){
-    if(S.players.some(function(p){return p.name===n}))return;
-    S.players.push({id:S.nid++,name:n,level:lvl,gk:$("who").value==="gk",active:now,games:0,near:0,mix:0,waitMs:0,waitSince:(now&&S.startedAt)?t:null});
+    var p=S.players.filter(function(q){return q.name===n})[0];
+    if(p){
+      if(now&&!p.active){p.active=true;if(S.startedAt&&pl.indexOf(p.id)<0)p.waitSince=t;woke.push(n)}
+      else same.push(n);
+      return;
+    }
+    S.players.push({id:S.nid++,name:n,level:lvl,gk:gk,active:now,games:0,near:0,mix:0,waitMs:0,waitSince:(now&&S.startedAt)?t:null});
+    added.push(n);
   });
-  $("names").value="";save();render();
+  var out=[];
+  if(added.length)out.push("เพิ่มแล้ว: "+added.join(", ")+" ("+(gk?"GK":"ลูกค้า")+", ระดับ "+lvl+(now?", เข้าคิวรอ":", ยังไม่ติ๊กมาตีวันนี้")+")");
+  if(woke.length)out.push("มีชื่ออยู่แล้ว ติ๊กมาตีวันนี้ให้แล้ว: "+woke.join(", "));
+  if(same.length)out.push("มีชื่ออยู่แล้ว (ไม่เปลี่ยนแปลง): "+same.join(", "));
+  msg.textContent=out.join(" | ");
+  $("names").value="";S.next=null;save();render();
 }
 $("b2all").onclick=function(){S.players.forEach(function(p){p.b2b=true});S.next=null;save();render()};
 $("b2none").onclick=function(){S.players.forEach(function(p){p.b2b=false});S.next=null;save();render()};
@@ -483,9 +504,11 @@ function ready(){
   if(!(document.fonts&&document.fonts.load))return Promise.resolve();
   return Promise.all([document.fonts.load('400 14px Prompt','ก'),document.fonts.load('600 14px Prompt','ก')]).catch(function(){});
 }
+function expSay(t){var e=$("expmsg");if(e)e.textContent=t||""}
 function dl(blob,name){
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
   document.body.appendChild(a);a.click();a.remove();
+  if(/\.(png|pdf)$/.test(name))expSay("สร้างไฟล์แล้ว: "+name+" (ดูที่แถบดาวน์โหลดของเบราว์เซอร์ ถ้าไม่เห็น ให้อนุญาตการดาวน์โหลดของเว็บนี้)");
   setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
 }
 function drawTable(rows,H,sub,pg,grand){
@@ -529,12 +552,14 @@ function drawTable(rows,H,sub,pg,grand){
   return c;
 }
 function exportImg(rows,t,games){
-  if(!rows.length){say("ยังไม่มีข้อมูลให้บันทึก");return}
-  say("");
+  if(!rows.length){expSay("ยังไม่มีข้อมูลให้บันทึก");return}
+  say("");expSay("กำลังสร้างรูป...");
   ready().then(function(){
+    try{
     var c=drawTable(rows,HEAD+RH*(rows.length+2)+40,subOf(t,games),"",grandOf(rows));
-    c.toBlob(function(b){if(!b){say("สร้างรูปไม่สำเร็จ");return}dl(b,fname("badminton","png",t))},"image/png");
-  });
+    c.toBlob(function(b){if(!b){expSay("สร้างรูปไม่สำเร็จ");return}try{dl(b,fname("badminton","png",t))}catch(e){expSay("บันทึกรูปไม่สำเร็จ: "+(e&&e.message||e))}},"image/png");
+    }catch(e){expSay("สร้างรูปไม่สำเร็จ: "+(e&&e.message||e))}
+  }).catch(function(e){expSay("สร้างรูปไม่สำเร็จ: "+(e&&e.message||e))});
 }
 /* สร้างไฟล์ PDF เอง (หน้าละ 1 รูป JPEG) ไม่ใช้ไลบรารี และแสดงภาษาไทยได้ครบ */
 function makePdf(imgs){
@@ -562,9 +587,10 @@ function makePdf(imgs){
   return new Blob(parts,{type:"application/pdf"});
 }
 function exportPdf(rows,t,games){
-  if(!rows.length){say("ยังไม่มีข้อมูลให้ส่งออก");return}
-  say("");
+  if(!rows.length){expSay("ยังไม่มีข้อมูลให้ส่งออก");return}
+  say("");expSay("กำลังสร้าง PDF...");
   ready().then(function(){
+    try{
     var pages=Math.ceil(rows.length/PER),grand=grandOf(rows),imgs=[];
     for(var i=0;i<pages;i++){
       var c=drawTable(rows.slice(i*PER,(i+1)*PER),PH,subOf(t,games),pages>1?"หน้า "+(i+1)+"/"+pages:"",i===pages-1?grand:null);
@@ -573,7 +599,8 @@ function exportPdf(rows,t,games){
       imgs.push({data:u,w:c.width,h:c.height});
     }
     dl(makePdf(imgs),fname("badminton","pdf",t));
-  });
+    }catch(e){expSay("สร้าง PDF ไม่สำเร็จ: "+(e&&e.message||e))}
+  }).catch(function(e){expSay("สร้าง PDF ไม่สำเร็จ: "+(e&&e.message||e))});
 }
 $("saveimg").onclick=function(){exportImg(rowsToday(),S.startedAt||Date.now(),S.gcount)};
 $("savepdf").onclick=function(){exportPdf(rowsToday(),S.startedAt||Date.now(),S.gcount)};
@@ -618,7 +645,7 @@ try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().
 
 /* ---------- ซิงก์ข้ามเครื่อง (Firebase Firestore) ---------- */
 var RK="kdp-room",VIEW=/[?&]view=1/.test(location.search),CID=Math.random().toString(36).slice(2);
-var DB=null,ROOMREF=null,ROOM="",ready=false,wTimer=null,wBusy=false,wDirty=false,rTimer=null,seededDays=false;
+var DB=null,ROOMREF=null,ROOM="",syncReady=false,wTimer=null,wBusy=false,wDirty=false,rTimer=null,seededDays=false;
 var BASE0={players:[],rules:[],history:[],slots:[],next:null,gcount:0,partner:{},opp:{},courts:2,nid:1,mode:"auto",hours:3,startedAt:null};
 function setSync(t,c){var e=$("sync");if(e){e.textContent=t;e.className="muted sync "+(c||"")}}
 function lsSave(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -628,9 +655,9 @@ function normS(){
   var mx=0;S.players.concat(S.rules).forEach(function(o){if(o.id>mx)mx=o.id});S.nid=Math.max(S.nid||1,mx+1);
 }
 function errTxt(e){return e&&e.code==="permission-denied"?"ไม่มีสิทธิ์ (ตรวจกฎ Firestore และรหัสห้อง)":(e&&(e.code||e.message))||"error"}
-function pushState(){if(!DB||VIEW||!ready)return;wDirty=true;clearTimeout(wTimer);wTimer=setTimeout(flush,600)}
+function pushState(){if(!DB||VIEW||!syncReady)return;wDirty=true;clearTimeout(wTimer);wTimer=setTimeout(flush,600)}
 function flush(){
-  if(!DB||VIEW||!ready||wBusy||!wDirty)return;
+  if(!DB||VIEW||!syncReady||wBusy||!wDirty)return;
   wBusy=true;wDirty=false;
   var c={};Object.keys(S).forEach(function(k){if(k!=="history"&&k!=="lastBackup")c[k]=S[k]});
   ROOMREF.set({json:JSON.stringify(c),by:CID,t:Date.now()}).then(function(){
@@ -647,7 +674,7 @@ function adoptRemote(d){
   Object.keys(S).forEach(function(k){delete S[k]});
   Object.assign(S,BASE0,n);
   S.history=hist||[];if(lb)S.lastBackup=lb;
-  normS();lsSave();fixSlots();render();
+  normS();lsSave();fixSlots();render();fillSheetCfg();
 }
 function dayPut(d){if(!DB||VIEW||!d)return;ROOMREF.collection("days").doc("d"+d.at).set({at:d.at,json:JSON.stringify(d)}).catch(function(e){setSync("บันทึกประวัติรายวันไม่สำเร็จ: "+errTxt(e),"bad")})}
 function dayDel(at){if(!DB||VIEW)return;ROOMREF.collection("days").doc("d"+at).delete().catch(function(){})}
@@ -661,8 +688,8 @@ function connect(){
   setSync("กำลังเชื่อมต่อ...","");
   ROOMREF.onSnapshot(function(sn){
     if(sn.metadata.fromCache&&!sn.exists)return;
-    if(sn.exists){adoptRemote(sn.data());ready=true;setSync(VIEW?"ดูอย่างเดียว (อัปเดตสด)":"ซิงก์สดอยู่ ทุกเครื่องเห็นข้อมูลเดียวกัน","ok")}
-    else{ready=true;if(!VIEW&&S.players.length){wDirty=true;flush();setSync("ส่งข้อมูลในเครื่องนี้ขึ้นห้องใหม่แล้ว","ok")}else setSync(VIEW?"ดูอย่างเดียว (ห้องนี้ยังไม่มีข้อมูล)":"เชื่อมต่อแล้ว ห้องนี้ยังว่าง","ok")}
+    if(sn.exists){adoptRemote(sn.data());syncReady=true;setSync(VIEW?"ดูอย่างเดียว (อัปเดตสด)":"ซิงก์สดอยู่ ทุกเครื่องเห็นข้อมูลเดียวกัน","ok")}
+    else{syncReady=true;if(!VIEW&&S.players.length){wDirty=true;flush();setSync("ส่งข้อมูลในเครื่องนี้ขึ้นห้องใหม่แล้ว","ok")}else setSync(VIEW?"ดูอย่างเดียว (ห้องนี้ยังไม่มีข้อมูล)":"เชื่อมต่อแล้ว ห้องนี้ยังว่าง","ok")}
     fillSheetCfg();maybeAutoPull();
   },function(e){setSync("อ่านข้อมูลไม่ได้: "+errTxt(e),"bad")});
   ROOMREF.collection("days").orderBy("at","desc").limit(200).onSnapshot(function(q){
@@ -732,7 +759,7 @@ function applyList(list,bad,useJoin){
 }
 $("shgo").onclick=shImport;
 /* ---------- ดึงจาก Google Sheet ตรงๆ (Apps Script) ---------- */
-function fillSheetCfg(){var c=S.sheet||{};if($("shurl"))$("shurl").value=c.url||"";if($("shtok"))$("shtok").value=c.token||""}
+function fillSheetCfg(){var c=S.sheet||{},u=$("shurl"),t=$("shtok");if(u&&document.activeElement!==u)u.value=c.url||"";if(t&&document.activeElement!==t)t.value=c.token||""}
 $("shsave").onclick=function(){
   var u=$("shurl").value.trim(),t=$("shtok").value.trim();
   if(!/^https:\/\/script\.google\.com\//.test(u)||!t){$("shmsg").textContent="ลิงก์ต้องขึ้นต้นด้วย https://script.google.com/ และต้องใส่รหัสผ่าน";return}
