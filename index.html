@@ -104,7 +104,7 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       <div class="row" style="margin-top:10px"><button id="saveimg" class="keep">บันทึกสรุปเป็นรูป</button></div>
       <p class="muted" id="expmsg" role="status"></p>
       <p class="muted">เกมติดกัน = ทั้ง 4 คนระดับห่างกันไม่เกิน 1 ตีคุม = ระดับห่างกันอย่างน้อย 2 แต่ผลรวมระดับของสองทีมเท่ากัน</p>
-      <p class="muted">ค่าใช้จ่าย = ค่าสนาม + ค่าลูก x จำนวนเกม (คิดค่าสนามเมื่อเล่นอย่างน้อย 1 เกม) คน GK 85 + 23 ต่อเกม สูงสุด 200 บาท ลูกค้า 95 + 25 ต่อเกม สูงสุด 220 บาท เครื่องหมาย * คือถึงเพดานแล้ว</p>
+      <p class="muted">ค่าใช้จ่าย = ค่าสนาม + ค่าลูก x จำนวนเกม (คิดค่าสนามเมื่อเล่นอย่างน้อย 1 เกม) คน GK 85 + 23 ต่อเกม ลูกค้า 95 + 25 ต่อเกม (ไม่มีเพดานยอด)</p>
       <div class="row" style="margin-top:12px"><button id="newday">เริ่มวันใหม่ (เก็บข้อมูลวันนี้)</button><button id="reset">ล้างโดยไม่บันทึก</button></div>
       <h2 style="margin-top:22px">ประวัติย้อนหลัง</h2>
       <div class="row viewhide" style="margin-bottom:8px"><select id="oldsel"><option value="30">เก่ากว่า 30 วัน</option><option value="60">เก่ากว่า 60 วัน</option><option value="90">เก่ากว่า 90 วัน</option><option value="0">ทั้งหมด</option></select><button id="olddel">ลบประวัติเก่า</button></div>
@@ -145,7 +145,7 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       </div>
     </section>
   </div>
-<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v12 · 3 พ.ย. 2569 · จัดตัวล่วงหน้า (ไม่มีช่องติ๊กรายชื่อฝั่งขวา)</p>
+<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v13 · 3 พ.ย. 2569 · เอาเพดานยอดออก</p>
 </main>
 <dialog id="rndlg"><p style="margin-top:0">แก้ชื่อผู้เล่น</p><input type="text" id="rnin" style="width:100%" autocomplete="off"><p class="muted" id="rnmsg" role="status"></p><div class="row"><button class="primary" id="rnyes">บันทึก</button><button id="rnno">ยกเลิก</button></div></dialog>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
@@ -185,7 +185,7 @@ function hms(x){x=Math.max(0,Math.floor(x/1000));return Math.floor(x/3600)+":"+p
 function total(p){return p.waitMs+(p.waitSince?Date.now()-p.waitSince:0)}
 function playingIds(){var r=[];S.slots.forEach(function(s){if(s)r=r.concat(s.m)});return r}
 function fixSlots(){while(S.slots.length<S.courts)S.slots.push(null);while(S.slots.length>S.courts&&S.slots[S.slots.length-1]===null)S.slots.pop()}
-var PR={gk:{court:85,ball:23,cap:200},cu:{court:95,ball:25,cap:220}};
+var PR={gk:{court:85,ball:23,cap:Infinity},cu:{court:95,ball:25,cap:Infinity}};
 function bill(p){var r=p.gk?PR.gk:PR.cu;if(!p.games)return{court:0,ball:0,sum:0,capped:false};var raw=r.court+r.ball*p.games;return{court:r.court,ball:r.ball*p.games,sum:Math.min(raw,r.cap),capped:raw>r.cap}}
 var Q={p:"",s:"",f:"all"};
 function hit(p,q){return !q||p.name.toLowerCase().indexOf(q)>=0}
