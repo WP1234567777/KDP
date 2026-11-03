@@ -93,6 +93,15 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
         <label for="hours">ชั่วโมง</label><input type="number" id="hours" min="0.5" max="12" step="0.5">
         <select id="mode" aria-label="รูปแบบการจัด"><option value="auto">สลับอัตโนมัติ</option><option value="near">ระดับติดกันทั้งหมด</option><option value="mix">ตีคุมทั้งหมด</option></select>
       </div>
+      <div id="pre" class="viewhide" style="margin-bottom:14px">
+        <h2 style="margin-top:0">เลือกคนก่อนเริ่ม</h2>
+        <p id="precnt" style="margin:0 0 6px;font-weight:600"></p>
+        <div class="row"><input type="search" id="preq" placeholder="ค้นหาชื่อ" aria-label="ค้นหาชื่อก่อนเริ่ม" style="flex:1;min-width:0"><button id="preall">เลือกทั้งหมด</button><button id="prenone">ล้างทั้งหมด</button></div>
+        <ul class="players" id="prelist" style="margin-top:8px"></ul>
+        <p class="muted" style="margin:6px 0">ติ๊กช่องหน้าชื่อ = มาตีวันนี้ แก้ชื่อ ระดับ ประเภท หรือลบได้ที่แถวเดียวกัน (ปุ่มเลือกทั้งหมด/ล้างทั้งหมด ทำเฉพาะชื่อที่ค้นหาอยู่)</p>
+        <div class="row"><input type="text" id="prename" placeholder="เพิ่มชื่อใหม่" autocomplete="off" style="flex:1;min-width:0"><select id="prelvl" aria-label="ระดับ"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select><select id="prewho" aria-label="ประเภท"><option value="cu" selected>ลูกค้า</option><option value="gk">GK</option></select><button id="preadd">เพิ่ม</button></div>
+        <p class="muted" id="premsg" role="status" style="margin:4px 0 0"></p>
+      </div>
       <div class="row" style="margin-top:12px"><button class="primary" id="gen">เริ่ม</button></div>
       <div class="msg" id="msg" role="status"></div>
       <div class="clock" id="clock" hidden></div>
@@ -144,8 +153,9 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       </div>
     </section>
   </div>
-<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v7 · 1 พ.ย. 2569 · ตัด PDF, ดูรูปก่อนบันทึก, ลบประวัติเก่า</p>
+<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v9 · 3 พ.ย. 2569 · แก้จำนวนเกมในตารางสรุปได้</p>
 </main>
+<dialog id="rndlg"><p style="margin-top:0">แก้ชื่อผู้เล่น</p><input type="text" id="rnin" style="width:100%" autocomplete="off"><p class="muted" id="rnmsg" role="status"></p><div class="row"><button class="primary" id="rnyes">บันทึก</button><button id="rnno">ยกเลิก</button></div></dialog>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -340,6 +350,45 @@ function renderHistory(){
     box.appendChild(el);
   });
 }
+function mkRow(p,playing){
+    var li=document.createElement("li");if(!p.active)li.className="rest";
+    var st=!S.startedAt||!p.active?"":(playing.indexOf(p.id)>=0?"กำลังเล่น":'<span class="wt" data-id="'+p.id+'"></span>');
+    li.innerHTML='<input type="checkbox" aria-label="พร้อมเล่น '+esc(p.name)+'"'+(p.active?" checked":"")+'><span class="nm">'+esc(p.name)+'</span><select class="lv" aria-label="ระดับฝีมือ '+esc(p.name)+'">'+lvOpts(p.level)+'</select><select class="lv gk" aria-label="ประเภท '+esc(p.name)+'"><option value="cu"'+(p.gk?"":" selected")+'>ลูกค้า</option><option value="gk"'+(p.gk?" selected":"")+'>GK</option></select><label class="cnt"><input type="checkbox" class="b2c"'+(p.b2b?" checked":"")+' aria-label="ลง 2 เกมติดได้ '+esc(p.name)+'"> ติด2เกม</label><span class="cnt">'+st+'</span><button class="rn" aria-label="แก้ชื่อ '+esc(p.name)+'">แก้ชื่อ</button><button class="x" aria-label="ลบ '+esc(p.name)+'">ลบ</button>';
+    li.querySelector("input").onchange=function(e){
+      p.active=e.target.checked;
+      if(S.startedAt){var t=Date.now();
+        if(p.active){if(playing.indexOf(p.id)<0)p.waitSince=t}
+        else if(p.waitSince){p.waitMs+=t-p.waitSince;p.waitSince=null}}
+      save();render()};
+    li.querySelector("select").onchange=function(e){p.level=parseInt(e.target.value,10);save();render()};
+    li.querySelector("select.gk").onchange=function(e){p.gk=e.target.value==="gk";save();render()};
+    li.querySelector(".b2c").onchange=function(e){p.b2b=e.target.checked;S.next=null;save();render()};
+    li.querySelector(".rn").onclick=function(){renameP(p)};
+    li.querySelector(".x").onclick=function(){if(playing.indexOf(p.id)>=0){say(p.name+" กำลังเล่นอยู่ ลบไม่ได้");return}ask("ลบ "+p.name+" ออกจากฐานข้อมูลถาวร?",function(){S.players=S.players.filter(function(q){return q.id!==p.id});S.rules=S.rules.filter(function(r){return r.a!==p.id&&r.b!==p.id});save();render()})};
+    return li;
+}
+function renameP(p){
+  var d=$("rndlg"),inp=$("rnin");inp.value=p.name;$("rnmsg").textContent="";
+  $("rnyes").onclick=function(){
+    var n=inp.value.trim();
+    if(!n){$("rnmsg").textContent="ชื่อว่างไม่ได้";return}
+    if(S.players.some(function(q){return q.id!==p.id&&q.name===n})){$("rnmsg").textContent="มีชื่อ “"+n+"” อยู่แล้ว";return}
+    p.name=n;d.close();S.next=null;save();render();
+  };
+  $("rnno").onclick=function(){d.close()};
+  if(d.showModal)d.showModal();else d.setAttribute("open","");
+  setTimeout(function(){inp.focus();inp.select()},50);
+}
+function preAdd(){
+  var n=$("prename").value.trim();if(!n){$("premsg").textContent="พิมพ์ชื่อก่อน";return}
+  $("names").value=n;$("lvl").value=$("prelvl").value;$("who").value=$("prewho").value;$("addnow").checked=true;
+  addPlayers();$("premsg").textContent=$("addmsg").textContent;$("prename").value="";
+}
+function selAll(v){
+  var t=Date.now();
+  S.players.forEach(function(p){if(hit(p,Q.pre)&&p.active!==v){p.active=v;if(S.startedAt){if(v)p.waitSince=t;else if(p.waitSince){p.waitMs+=t-p.waitSince;p.waitSince=null}}}});
+  S.next=null;save();render();
+}
 function render(){
   fixSlots();
   $("count").textContent="มาวันนี้ "+S.players.filter(function(p){return p.active}).length+" จาก "+S.players.length+" คน";
@@ -350,22 +399,16 @@ function render(){
   var ul=$("plist");ul.innerHTML="";
   var pf=S.players.filter(function(p){return hit(p,Q.p)&&(Q.f!=="today"||p.active)});
   if(!pf.length&&Q.p)ul.innerHTML='<li class="muted">ไม่พบชื่อที่ค้นหา</li>';
-  pf.forEach(function(p){
-    var li=document.createElement("li");if(!p.active)li.className="rest";
-    var st=!S.startedAt||!p.active?"":(playing.indexOf(p.id)>=0?"กำลังเล่น":'<span class="wt" data-id="'+p.id+'"></span>');
-    li.innerHTML='<input type="checkbox" aria-label="พร้อมเล่น '+esc(p.name)+'"'+(p.active?" checked":"")+'><span class="nm">'+esc(p.name)+'</span><select class="lv" aria-label="ระดับฝีมือ '+esc(p.name)+'">'+lvOpts(p.level)+'</select><select class="lv gk" aria-label="ประเภท '+esc(p.name)+'"><option value="cu"'+(p.gk?"":" selected")+'>ลูกค้า</option><option value="gk"'+(p.gk?" selected":"")+'>GK</option></select><label class="cnt"><input type="checkbox" class="b2c"'+(p.b2b?" checked":"")+' aria-label="ลง 2 เกมติดได้ '+esc(p.name)+'"> ติด2เกม</label><span class="cnt">'+st+'</span><button class="x" aria-label="ลบ '+esc(p.name)+'">ลบ</button>';
-    li.querySelector("input").onchange=function(e){
-      p.active=e.target.checked;
-      if(S.startedAt){var t=Date.now();
-        if(p.active){if(playing.indexOf(p.id)<0)p.waitSince=t}
-        else if(p.waitSince){p.waitMs+=t-p.waitSince;p.waitSince=null}}
-      save();render()};
-    li.querySelector("select").onchange=function(e){p.level=parseInt(e.target.value,10);save();render()};
-    li.querySelector("select.gk").onchange=function(e){p.gk=e.target.value==="gk";save();render()};
-    li.querySelector(".b2c").onchange=function(e){p.b2b=e.target.checked;S.next=null;save();render()};
-    li.querySelector(".x").onclick=function(){if(playing.indexOf(p.id)>=0){say(p.name+" กำลังเล่นอยู่ ลบไม่ได้");return}ask("ลบ "+p.name+" ออกจากฐานข้อมูลถาวร?",function(){S.players=S.players.filter(function(q){return q.id!==p.id});S.rules=S.rules.filter(function(r){return r.a!==p.id&&r.b!==p.id});save();render()})};
-    ul.appendChild(li);
-  });
+  pf.forEach(function(p){ul.appendChild(mkRow(p,playing))});
+  var pre=$("pre");pre.hidden=!!S.startedAt;
+  if(!S.startedAt){
+    var na=S.players.filter(function(p){return p.active}).length;
+    $("precnt").textContent="เลือกแล้ว "+na+" คน จากทั้งหมด "+S.players.length+" คน"+(na<4?" (ต้องอย่างน้อย 4 คน)":"");
+    $("precnt").style.color=na<4?"var(--danger)":"";
+    var pu=$("prelist");pu.innerHTML="";
+    S.players.filter(function(p){return hit(p,Q.pre)}).forEach(function(p){pu.appendChild(mkRow(p,[]))});
+    if(!pu.children.length)pu.innerHTML='<li class="muted">'+(S.players.length?"ไม่พบชื่อที่ค้นหา":"ยังไม่มีรายชื่อ เพิ่มชื่อด้านล่างหรือดึงจาก Google Sheet")+'</li>';
+  }
   var out=$("out");
   if(!S.startedAt){out.innerHTML='<div class="empty">ติ๊ก “มาตีวันนี้” อย่างน้อย 4 คน แล้วกด “เริ่ม”</div>'}
   else{
@@ -400,7 +443,14 @@ function render(){
   }
   var rows=S.players.filter(function(p){return p.active||p.games>0}).sort(function(a,b){return b.games-a.games||a.name.localeCompare(b.name)});
   var vis=rows.filter(function(p){return hit(p,Q.s)});
-  $("sum").innerHTML=rows.length?'<table><thead><tr><th>ชื่อ</th><th>ระดับ</th><th>ประเภท</th><th>เกมรวม</th><th>ติดกัน</th><th>ตีคุม</th><th>รอรวม</th><th>ค่าสนาม</th><th>ค่าลูก</th><th>รวม (บาท)</th></tr></thead><tbody>'+vis.map(function(p){var b=bill(p);return '<tr><td>'+esc(p.name)+'</td><td>'+p.level+'</td><td>'+(p.gk?"GK":"ลูกค้า")+'</td><td><b>'+p.games+'</b></td><td>'+p.near+'</td><td>'+p.mix+'</td><td><span class="wm" data-id="'+p.id+'"></span></td><td>'+b.court+'</td><td>'+b.ball+'</td><td><b>'+b.sum+(b.capped?'*':'')+'</b></td></tr>'}).join("")+'</tbody><tfoot><tr><td colspan="9"><b>รวมทั้งหมด (บาท)'+(Q.s?' (ทุกคน แสดง '+vis.length+' จาก '+rows.length+' คน)':'')+'</b></td><td><b>'+rows.reduce(function(s,p){return s+bill(p).sum},0)+'</b></td></tr></tfoot></table>':'<div class="empty">ยังไม่มีผู้เล่นที่มาตีวันนี้</div>';
+  $("sum").innerHTML=rows.length?'<table><thead><tr><th>ชื่อ</th><th>ระดับ</th><th>ประเภท</th><th>เกมรวม</th><th>ติดกัน</th><th>ตีคุม</th><th>รอรวม</th><th>ค่าสนาม</th><th>ค่าลูก</th><th>รวม (บาท)</th></tr></thead><tbody>'+vis.map(function(p){var b=bill(p);return '<tr><td>'+esc(p.name)+'</td><td>'+p.level+'</td><td>'+(p.gk?"GK":"ลูกค้า")+'</td><td><input type="number" class="gm" min="0" max="99" value="'+p.games+'" data-id="'+p.id+'" aria-label="เกมรวม '+esc(p.name)+'" style="width:4.2em;font-weight:700"></td><td>'+p.near+'</td><td>'+p.mix+'</td><td><span class="wm" data-id="'+p.id+'"></span></td><td>'+b.court+'</td><td>'+b.ball+'</td><td><b>'+b.sum+(b.capped?'*':'')+'</b></td></tr>'}).join("")+'</tbody><tfoot><tr><td colspan="9"><b>รวมทั้งหมด (บาท)'+(Q.s?' (ทุกคน แสดง '+vis.length+' จาก '+rows.length+' คน)':'')+'</b></td><td><b>'+rows.reduce(function(s,p){return s+bill(p).sum},0)+'</b></td></tr></tfoot></table>':'<div class="empty">ยังไม่มีผู้เล่นที่มาตีวันนี้</div>';
+  document.querySelectorAll("#sum .gm").forEach(function(e){e.onchange=function(){
+    var p=byId(+e.dataset.id);if(!p)return;
+    var n=parseInt(e.value,10);if(!(n>=0))n=p.games;n=Math.min(n,99);
+    var d=n-p.games;
+    if(d>0)p.near+=d;else{var r=-d,k=Math.min(p.near,r);p.near-=k;r-=k;p.mix=Math.max(0,p.mix-r)}
+    p.games=n;S.next=null;save();render();
+  }});
   tick();
 }
 function tick(){
@@ -586,6 +636,9 @@ function exportImg(rows,t,games){
 }
 $("saveimg").onclick=function(){exportImg(rowsToday(),S.startedAt||Date.now(),S.gcount)};
 
+$("preq").oninput=function(e){Q.pre=e.target.value.trim().toLowerCase();render()};
+$("preall").onclick=function(){selAll(true)};$("prenone").onclick=function(){selAll(false)};
+$("preadd").onclick=preAdd;$("prename").onkeydown=function(e){if(e.key==="Enter")preAdd()};
 $("olddel").onclick=function(){
   var n=parseInt($("oldsel").value,10),cut=Date.now()-n*864e5;
   var gone=S.history.filter(function(d){return n===0||d.at<cut});
