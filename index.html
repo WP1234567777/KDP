@@ -93,16 +93,6 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
         <label for="hours">ชั่วโมง</label><input type="number" id="hours" min="0.5" max="12" step="0.5">
         <select id="mode" aria-label="รูปแบบการจัด"><option value="auto">สลับอัตโนมัติ</option><option value="near">ระดับติดกันทั้งหมด</option><option value="mix">ตีคุมทั้งหมด</option></select>
       </div>
-      <div id="pre" class="viewhide" style="margin-bottom:14px">
-        <h2 style="margin-top:0">เลือกคนก่อนเริ่ม</h2>
-        <p id="precnt" style="margin:0 0 6px;font-weight:600"></p>
-        <div class="row"><input type="search" id="preq" placeholder="ค้นหาชื่อ" aria-label="ค้นหาชื่อก่อนเริ่ม" style="flex:1;min-width:0"><button id="preall">เลือกทั้งหมด</button><button id="prenone">ล้างทั้งหมด</button></div>
-        <ul class="players" id="prelist" style="margin-top:8px"></ul>
-        <p class="muted" style="margin:6px 0">ติ๊กช่องหน้าชื่อ = มาตีวันนี้ แก้ชื่อ ระดับ ประเภท หรือลบได้ที่แถวเดียวกัน (ปุ่มเลือกทั้งหมด/ล้างทั้งหมด ทำเฉพาะชื่อที่ค้นหาอยู่)</p>
-        <div id="board"></div>
-        <div class="row" style="margin-top:12px"><input type="text" id="prename" placeholder="เพิ่มชื่อใหม่" autocomplete="off" style="flex:1;min-width:0"><select id="prelvl" aria-label="ระดับ"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select><select id="prewho" aria-label="ประเภท"><option value="cu" selected>ลูกค้า</option><option value="gk">GK</option></select><button id="preadd">เพิ่ม</button></div>
-        <p class="muted" id="premsg" role="status" style="margin:4px 0 0"></p>
-      </div>
       <div class="row" style="margin-top:12px"><button class="primary" id="gen">เริ่ม</button></div>
       <div class="msg" id="msg" role="status"></div>
       <div class="clock" id="clock" hidden></div>
@@ -154,7 +144,7 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       </div>
     </section>
   </div>
-<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v10 · 3 พ.ย. 2569 · จัดตัวล่วงหน้า (ลาก/แตะ/สุ่ม) ก่อนเริ่ม</p>
+<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v11 · 3 พ.ย. 2569 · เอากล่องก่อนเริ่มฝั่งขวาออก เหลือรายชื่อฝั่งซ้าย</p>
 </main>
 <dialog id="rndlg"><p style="margin-top:0">แก้ชื่อผู้เล่น</p><input type="text" id="rnin" style="width:100%" autocomplete="off"><p class="muted" id="rnmsg" role="status"></p><div class="row"><button class="primary" id="rnyes">บันทึก</button><button id="rnno">ยกเลิก</button></div></dialog>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
@@ -448,15 +438,7 @@ function render(){
   var pf=S.players.filter(function(p){return hit(p,Q.p)&&(Q.f!=="today"||p.active)});
   if(!pf.length&&Q.p)ul.innerHTML='<li class="muted">ไม่พบชื่อที่ค้นหา</li>';
   pf.forEach(function(p){ul.appendChild(mkRow(p,playing))});
-  var pre=$("pre");pre.hidden=!!S.startedAt;
   if(!S.startedAt){
-    var na=S.players.filter(function(p){return p.active}).length;
-    $("precnt").textContent="เลือกแล้ว "+na+" คน จากทั้งหมด "+S.players.length+" คน"+(na<4?" (ต้องอย่างน้อย 4 คน)":"");
-    $("precnt").style.color=na<4?"var(--danger)":"";
-    var pu=$("prelist");pu.innerHTML="";
-    S.players.filter(function(p){return hit(p,Q.pre)}).forEach(function(p){pu.appendChild(mkRow(p,[]))});
-    $("board").innerHTML=boardH();bindBoard();
-    if(!pu.children.length)pu.innerHTML='<li class="muted">'+(S.players.length?"ไม่พบชื่อที่ค้นหา":"ยังไม่มีรายชื่อ เพิ่มชื่อด้านล่างหรือดึงจาก Google Sheet")+'</li>';
   }
   var out=$("out");
   if(!S.startedAt){out.innerHTML='<div class="empty">ติ๊ก “มาตีวันนี้” อย่างน้อย 4 คน แล้วกด “เริ่ม”</div>'}
@@ -698,9 +680,6 @@ function exportImg(rows,t,games){
 }
 $("saveimg").onclick=function(){exportImg(rowsToday(),S.startedAt||Date.now(),S.gcount)};
 
-$("preq").oninput=function(e){Q.pre=e.target.value.trim().toLowerCase();render()};
-$("preall").onclick=function(){selAll(true)};$("prenone").onclick=function(){selAll(false)};
-$("preadd").onclick=preAdd;$("prename").onkeydown=function(e){if(e.key==="Enter")preAdd()};
 $("olddel").onclick=function(){
   var n=parseInt($("oldsel").value,10),cut=Date.now()-n*864e5;
   var gone=S.history.filter(function(d){return n===0||d.at<cut});
