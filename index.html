@@ -99,7 +99,8 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
         <div class="row"><input type="search" id="preq" placeholder="ค้นหาชื่อ" aria-label="ค้นหาชื่อก่อนเริ่ม" style="flex:1;min-width:0"><button id="preall">เลือกทั้งหมด</button><button id="prenone">ล้างทั้งหมด</button></div>
         <ul class="players" id="prelist" style="margin-top:8px"></ul>
         <p class="muted" style="margin:6px 0">ติ๊กช่องหน้าชื่อ = มาตีวันนี้ แก้ชื่อ ระดับ ประเภท หรือลบได้ที่แถวเดียวกัน (ปุ่มเลือกทั้งหมด/ล้างทั้งหมด ทำเฉพาะชื่อที่ค้นหาอยู่)</p>
-        <div class="row"><input type="text" id="prename" placeholder="เพิ่มชื่อใหม่" autocomplete="off" style="flex:1;min-width:0"><select id="prelvl" aria-label="ระดับ"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select><select id="prewho" aria-label="ประเภท"><option value="cu" selected>ลูกค้า</option><option value="gk">GK</option></select><button id="preadd">เพิ่ม</button></div>
+        <div id="board"></div>
+        <div class="row" style="margin-top:12px"><input type="text" id="prename" placeholder="เพิ่มชื่อใหม่" autocomplete="off" style="flex:1;min-width:0"><select id="prelvl" aria-label="ระดับ"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select><select id="prewho" aria-label="ประเภท"><option value="cu" selected>ลูกค้า</option><option value="gk">GK</option></select><button id="preadd">เพิ่ม</button></div>
         <p class="muted" id="premsg" role="status" style="margin:4px 0 0"></p>
       </div>
       <div class="row" style="margin-top:12px"><button class="primary" id="gen">เริ่ม</button></div>
@@ -153,7 +154,7 @@ textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);bord
       </div>
     </section>
   </div>
-<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v9 · 3 พ.ย. 2569 · แก้จำนวนเกมในตารางสรุปได้</p>
+<p class="muted" style="text-align:center;margin-top:24px">เวอร์ชันหน้านี้: v10 · 3 พ.ย. 2569 · จัดตัวล่วงหน้า (ลาก/แตะ/สุ่ม) ก่อนเริ่ม</p>
 </main>
 <dialog id="rndlg"><p style="margin-top:0">แก้ชื่อผู้เล่น</p><input type="text" id="rnin" style="width:100%" autocomplete="off"><p class="muted" id="rnmsg" role="status"></p><div class="row"><button class="primary" id="rnyes">บันทึก</button><button id="rnno">ยกเลิก</button></div></dialog>
 <dialog id="dlg"><p id="dmsg" style="margin-top:0"></p><div class="row"><button class="primary" id="dyes">ตกลง</button><button id="dno">ยกเลิก</button></div></dialog>
@@ -350,6 +351,53 @@ function renderHistory(){
     box.appendChild(el);
   });
 }
+var DSEL=0;
+function drafts(){
+  if(!Array.isArray(S.draft))S.draft=[];
+  while(S.draft.length<S.courts)S.draft.push([0,0,0,0]);S.draft.length=S.courts;
+  var seen={};
+  S.draft.forEach(function(c){for(var j=0;j<4;j++){var id=c[j],p=id?byId(id):null;if(!p||!p.active||seen[id])c[j]=0;else seen[id]=1}});
+  return S.draft;
+}
+function dPlace(id,ci,j){
+  var D=drafts(),from=null;
+  D.forEach(function(c,a){c.forEach(function(v,b){if(v===id)from=[a,b]})});
+  var old=D[ci][j];D[ci][j]=id;if(from)D[from[0]][from[1]]=old;
+  DSEL=0;S.next=null;save();render();
+}
+function dRemove(id){drafts().forEach(function(c){for(var j=0;j<4;j++)if(c[j]===id)c[j]=0});DSEL=0;save();render()}
+function dRandom(only){
+  var D=drafts(),used={};D.forEach(function(c){c.forEach(function(v){if(v)used[v]=1})});
+  var pool=shuffle(S.players.filter(function(p){return p.active&&!used[p.id]}).map(function(p){return p.id}));
+  D.forEach(function(c,i){if(only!=null&&only!==i)return;for(var j=0;j<4;j++)if(!c[j]&&pool.length)c[j]=pool.shift()});
+  DSEL=0;S.next=null;save();render();
+}
+function boardH(){
+  var D=drafts(),used={};D.forEach(function(c){c.forEach(function(v){if(v)used[v]=1})});
+  function slot(i,j){var id=D[i][j],p=id?byId(id):null;
+    return '<span class="ds" data-c="'+i+'" data-j="'+j+'" style="display:inline-flex;align-items:center;gap:4px;min-width:42%;padding:6px 8px;margin:2px;border:1px dashed var(--line);border-radius:8px'+(p?';border-style:solid':'')+'">'+
+      (p?'<span draggable="true" data-pid="'+id+'" style="flex:1;cursor:grab">'+esc(p.name)+' <small>(Lv'+p.level+')</small></span><button class="x dx" data-rm="'+id+'" aria-label="เอา '+esc(p.name)+' ออก">✕</button>':'<span class="muted">ว่าง'+(DSEL?' — แตะเพื่อวาง':'')+'</span>')+'</span>'}
+  var h='<h3 style="margin:14px 0 4px">จัดตัวล่วงหน้า (ร่าง ยังไม่เริ่มเกม)</h3><p class="muted" style="margin:0 0 6px">แตะชื่อด้านล่างแล้วแตะช่องว่าง หรือลากชื่อไปวางก็ได้ ช่องที่เว้นว่างระบบสุ่มเติมให้ตอนกด “เริ่ม”</p>';
+  D.forEach(function(c,i){h+='<div class="dc" style="margin:6px 0"><b>คอร์ท '+(i+1)+'</b> <button class="dr" data-dr="'+i+'">สุ่มเติมคอร์ทนี้</button><div>'+slot(i,0)+slot(i,1)+'</div><div class="muted" style="text-align:center">พบกับ</div><div>'+slot(i,2)+slot(i,3)+'</div></div>'});
+  var pool=S.players.filter(function(p){return p.active&&!used[p.id]});
+  h+='<div class="row"><button id="drall">สุ่มเติมทุกช่องว่าง</button><button id="drclr">ล้างร่าง</button></div><div id="dpool" style="margin-top:8px"><span class="muted">ผู้เล่นที่ยังไม่ได้วาง ('+pool.length+'):</span><div style="margin-top:4px">'+(pool.length?pool.map(function(p){return '<span class="chip" draggable="true" data-pid="'+p.id+'" style="display:inline-block;margin:3px;padding:6px 10px;border-radius:16px;border:1px solid var(--line);cursor:pointer'+(DSEL===p.id?';background:var(--court);color:#fff':'')+'">'+esc(p.name)+'</span>'}).join(""):'<span class="muted">—</span>')+'</div></div>';
+  return h;
+}
+function bindBoard(){
+  var b=$("board");
+  b.querySelectorAll(".chip").forEach(function(e){e.onclick=function(){var id=+e.dataset.pid;DSEL=DSEL===id?0:id;render()}});
+  b.querySelectorAll("[draggable]").forEach(function(e){e.ondragstart=function(ev){ev.dataTransfer.setData("text/plain",e.dataset.pid);ev.dataTransfer.effectAllowed="move"}});
+  b.querySelectorAll(".ds").forEach(function(e){
+    e.onclick=function(ev){if(ev.target.closest(".dx"))return;if(DSEL)dPlace(DSEL,+e.dataset.c,+e.dataset.j)};
+    e.ondragover=function(ev){ev.preventDefault()};
+    e.ondrop=function(ev){ev.preventDefault();var id=+ev.dataTransfer.getData("text/plain");if(id)dPlace(id,+e.dataset.c,+e.dataset.j)};
+  });
+  b.querySelectorAll(".dx").forEach(function(e){e.onclick=function(){dRemove(+e.dataset.rm)}});
+  b.querySelectorAll(".dr").forEach(function(e){e.onclick=function(){dRandom(+e.dataset.dr)}});
+  var pl=$("dpool");pl.ondragover=function(ev){ev.preventDefault()};pl.ondrop=function(ev){ev.preventDefault();var id=+ev.dataTransfer.getData("text/plain");if(id)dRemove(id)};
+  $("drall").onclick=function(){dRandom()};
+  $("drclr").onclick=function(){S.draft=[];DSEL=0;save();render()};
+}
 function mkRow(p,playing){
     var li=document.createElement("li");if(!p.active)li.className="rest";
     var st=!S.startedAt||!p.active?"":(playing.indexOf(p.id)>=0?"กำลังเล่น":'<span class="wt" data-id="'+p.id+'"></span>');
@@ -407,6 +455,7 @@ function render(){
     $("precnt").style.color=na<4?"var(--danger)":"";
     var pu=$("prelist");pu.innerHTML="";
     S.players.filter(function(p){return hit(p,Q.pre)}).forEach(function(p){pu.appendChild(mkRow(p,[]))});
+    $("board").innerHTML=boardH();bindBoard();
     if(!pu.children.length)pu.innerHTML='<li class="muted">'+(S.players.length?"ไม่พบชื่อที่ค้นหา":"ยังไม่มีรายชื่อ เพิ่มชื่อด้านล่างหรือดึงจาก Google Sheet")+'</li>';
   }
   var out=$("out");
@@ -507,10 +556,23 @@ $("gen").onclick=function(){
     var t=Date.now();S.startedAt=t;S.players.forEach(function(p){p.waitSince=p.active?t:null});
   }
   fixSlots();
+  if(S.draft&&S.draft.length){
+    var DD=drafts(),order=DD.map(function(c,i){return i}).sort(function(a,b){return DD[b].filter(Boolean).length-DD[a].filter(Boolean).length});
+    order.forEach(function(i){
+      var c=DD[i];
+      if(S.slots[i]||!c.some(Boolean))return;
+      var held=[];DD.forEach(function(o,k){if(k!==i)o.forEach(function(id){var q=id&&byId(id);if(q&&q.active&&!S.slots.some(function(sl){return sl&&sl.m.indexOf(id)>=0})){q.active=false;held.push(q)}})});
+      var m=fillRandom(c.slice());held.forEach(function(q){q.active=true});
+      if(!m)return;
+      var l=m.map(L),sp=Math.max.apply(null,l)-Math.min.apply(null,l);
+      startMatch(i,m,sp<=1?"near":"mix");
+    });
+    S.draft=[];S.next=null;
+  }
   if(!fillAll()&&!$("msg").textContent)say("ไม่มีคอร์ทว่าง หรือผู้เล่นที่รอไม่พอ 4 คน");
   save();render();
 };
-function wipeDay(){S.players.forEach(function(p){p.games=0;p.near=0;p.mix=0;p.waitMs=0;p.waitSince=null;p.fresh=false});S.gcount=0;S.partner={};S.opp={};S.slots=[];S.next=null;S.startedAt=null}
+function wipeDay(){S.players.forEach(function(p){p.games=0;p.near=0;p.mix=0;p.waitMs=0;p.waitSince=null;p.fresh=false});S.gcount=0;S.partner={};S.opp={};S.slots=[];S.draft=[];S.next=null;S.startedAt=null}
 $("newday").onclick=function(){
   if(!S.gcount){say("ยังไม่มีเกมในวันนี้ จึงไม่มีอะไรให้บันทึก");return}
   ask("บันทึกสรุปวันนี้ลงประวัติ แล้วเริ่มวันใหม่? (รายชื่อ ระดับ ประเภท และเงื่อนไขพิเศษยังอยู่ แต่การติ๊กมาตีวันนี้จะถูกล้างทั้งหมด)",function(){
